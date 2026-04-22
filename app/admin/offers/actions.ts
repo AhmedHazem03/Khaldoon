@@ -72,7 +72,7 @@ export async function addOffer(formData: FormData) {
   });
 
   revalidatePath("/admin/offers");
-  revalidateTag("settings");
+  revalidateTag("settings", "default");
   revalidatePath("/");
 }
 

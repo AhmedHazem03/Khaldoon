@@ -71,7 +71,7 @@ export function OfferEditForm({ offer, updateAction }: Props) {
       <select
         name="benefit_type"
         value={benefitType}
-        onChange={(e) => setBenefitType(e.target.value)}
+        onChange={(e) => setBenefitType(e.target.value as typeof benefitType)}
         aria-label="نوع فائدة العرض"
         title="نوع فائدة العرض"
         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white font-medium"

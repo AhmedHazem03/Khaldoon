@@ -48,6 +48,7 @@ export default async function MenuPage() {
     const offer = Array.isArray(row.offers) ? row.offers[0] : row.offers;
     if (!offer) continue;
     if (offer.expires_at && new Date(offer.expires_at) < now) continue;
+    if (!row.product_id) continue;
     if (productOfferMap.has(row.product_id)) continue; // first offer wins
     productOfferMap.set(row.product_id, {
       offerId: offer.id,

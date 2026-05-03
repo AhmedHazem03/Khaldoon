@@ -133,10 +133,15 @@ CREATE TABLE offer_products (
   id          uuid      PRIMARY KEY DEFAULT gen_random_uuid(),
   offer_id    uuid      NOT NULL REFERENCES offers(id) ON DELETE CASCADE,
   product_id  uuid      REFERENCES products(id) ON DELETE CASCADE,
+  variant_id  uuid      REFERENCES product_variants(id) ON DELETE SET NULL,
   order_index integer   DEFAULT 0,
-  created_at  timestamp DEFAULT now(),
-  UNIQUE (offer_id, product_id)
+  created_at  timestamp DEFAULT now()
 );
+-- Partial unique indexes (variant_id can be NULL so standard UNIQUE won't work):
+CREATE UNIQUE INDEX idx_offer_products_no_variant
+  ON offer_products(offer_id, product_id) WHERE variant_id IS NULL;
+CREATE UNIQUE INDEX idx_offer_products_with_variant
+  ON offer_products(offer_id, product_id, variant_id) WHERE variant_id IS NOT NULL;
 
 -- ============================================================
 -- MIGRATION v2: Run these ALTER statements on existing databases
@@ -189,6 +194,20 @@ CREATE INDEX idx_orders_guest_token      ON orders(guest_token) WHERE guest_toke
 CREATE INDEX idx_offer_products_offer    ON offer_products(offer_id);
 CREATE INDEX idx_offer_products_product  ON offer_products(product_id);
 CREATE UNIQUE INDEX idx_offers_coupon_code ON offers(coupon_code) WHERE coupon_code IS NOT NULL;
+CREATE INDEX idx_offer_products_variant ON offer_products(variant_id) WHERE variant_id IS NOT NULL;
+
+-- ============================================================
+-- MIGRATION v3: Run on existing databases to add variant support
+-- ============================================================
+-- ALTER TABLE offer_products
+--   ADD COLUMN IF NOT EXISTS variant_id uuid REFERENCES product_variants(id) ON DELETE SET NULL;
+-- ALTER TABLE offer_products DROP CONSTRAINT IF EXISTS offer_products_offer_id_product_id_key;
+-- CREATE UNIQUE INDEX IF NOT EXISTS idx_offer_products_no_variant
+--   ON offer_products(offer_id, product_id) WHERE variant_id IS NULL;
+-- CREATE UNIQUE INDEX IF NOT EXISTS idx_offer_products_with_variant
+--   ON offer_products(offer_id, product_id, variant_id) WHERE variant_id IS NOT NULL;
+-- CREATE INDEX IF NOT EXISTS idx_offer_products_variant
+--   ON offer_products(variant_id) WHERE variant_id IS NOT NULL;
 
 -- ============================================================
 -- TRIGGERS
@@ -362,6 +381,12 @@ BEGIN
 
   RETURN v_order_id;
 END;
+$$;
+
+-- Atomically increment coupon uses_count — avoids read-modify-write race condition
+CREATE OR REPLACE FUNCTION increment_coupon_uses(p_coupon_id uuid)
+RETURNS void LANGUAGE sql SECURITY DEFINER AS $$
+  UPDATE offers SET uses_count = uses_count + 1 WHERE id = p_coupon_id;
 $$;
 
 CREATE OR REPLACE FUNCTION admin_adjust_points(

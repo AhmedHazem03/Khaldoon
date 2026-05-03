@@ -75,12 +75,12 @@ export default async function AdminMenuPage({
     <div className="space-y-6">
       {/* ── Header + Stats ──────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-[#1E2A4A]">إدارة المنيو</h1>
+        <h1 className="text-xl font-bold text-[#0F293E]">إدارة المنيو</h1>
         <div className="flex flex-wrap gap-2 text-xs font-medium">
-          <span className="bg-[#1E2A4A]/10 text-[#1E2A4A] rounded-full px-3 py-1.5">
+          <span className="bg-[#0F293E]/10 text-[#0F293E] rounded-full px-3 py-1.5">
             {totalCategories} قسم
           </span>
-          <span className="bg-[#F26522]/10 text-[#F26522] rounded-full px-3 py-1.5">
+          <span className="bg-[#E4570F]/10 text-[#E4570F] rounded-full px-3 py-1.5">
             {totalProducts} منتج
           </span>
           <span className="bg-green-50 text-green-700 rounded-full px-3 py-1.5">
@@ -101,7 +101,7 @@ export default async function AdminMenuPage({
 
       {/* ── Add Category ────────────────────────────────────────────────────── */}
       <section className="rounded-xl bg-white p-4 shadow-sm border border-gray-100">
-        <h2 className="text-base font-semibold text-[#1E2A4A] mb-3">
+        <h2 className="text-base font-semibold text-[#0F293E] mb-3">
           ➕ إضافة قسم جديد
         </h2>
         <form action={upsertCategory} className="flex flex-wrap gap-2">
@@ -128,7 +128,7 @@ export default async function AdminMenuPage({
           />
           <button
             type="submit"
-            className="min-h-[44px] px-4 rounded-lg bg-[#1E2A4A] text-white text-sm font-medium"
+            className="min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-sm font-medium"
           >
             إضافة
           </button>
@@ -158,7 +158,7 @@ export default async function AdminMenuPage({
                 currentImageUrl={cat.image_url ?? null}
               />
               <div className="min-w-0">
-                <span className="font-semibold text-[#1E2A4A]">
+                <span className="font-semibold text-[#0F293E]">
                   {cat.icon} {cat.name}
                 </span>
                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -209,7 +209,7 @@ export default async function AdminMenuPage({
 
           {/* Edit category inline form */}
           <details className="border-b border-gray-100">
-            <summary className="px-4 py-2 text-xs text-[#1E2A4A] cursor-pointer list-none hover:bg-gray-50">
+            <summary className="px-4 py-2 text-xs text-[#0F293E] cursor-pointer list-none hover:bg-gray-50">
               ✏️ تعديل بيانات القسم
             </summary>
             <form
@@ -249,7 +249,7 @@ export default async function AdminMenuPage({
               </select>
               <button
                 type="submit"
-                className="min-h-[44px] px-4 rounded-lg bg-[#1E2A4A] text-white text-sm font-medium"
+                className="min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-sm font-medium"
               >
                 حفظ التعديل
               </button>
@@ -269,7 +269,7 @@ export default async function AdminMenuPage({
 
             {/* Add product */}
             <details className="border border-dashed border-gray-200 rounded-lg">
-              <summary className="px-3 py-2 text-sm text-[#F26522] cursor-pointer list-none">
+              <summary className="px-3 py-2 text-sm text-[#E4570F] cursor-pointer list-none">
                 ➕ إضافة منتج في {cat.name}
               </summary>
               <AddProductForm categoryId={cat.id} categoryName={cat.name} />
@@ -316,7 +316,7 @@ function ProductRow({
               )}
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {product.base_price != null && (
-                  <span className="text-xs bg-orange-50 text-[#F26522] rounded px-1.5 py-0.5">
+                  <span className="text-xs bg-orange-50 text-[#E4570F] rounded px-1.5 py-0.5">
                     {product.base_price} ج
                   </span>
                 )}
@@ -384,7 +384,7 @@ function ProductRow({
 
       {/* Edit product form */}
       <details className="border-t border-gray-100">
-        <summary className="px-3 py-2 text-xs text-[#1E2A4A] cursor-pointer list-none hover:bg-gray-50">
+        <summary className="px-3 py-2 text-xs text-[#0F293E] cursor-pointer list-none hover:bg-gray-50">
           ✏️ تعديل المنتج
         </summary>
         <form action={upsertProduct} className="p-3 space-y-2 bg-blue-50/20">
@@ -450,7 +450,7 @@ function ProductRow({
             />
             <button
               type="submit"
-              className="min-h-[44px] px-4 rounded-lg bg-[#1E2A4A] text-white text-sm font-medium"
+              className="min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-sm font-medium"
             >
               حفظ
             </button>
@@ -469,7 +469,7 @@ function ProductRow({
 
         {/* Add variant */}
         <details className="mt-1">
-          <summary className="text-xs text-[#F26522] cursor-pointer list-none py-1">
+          <summary className="text-xs text-[#E4570F] cursor-pointer list-none py-1">
             ➕ إضافة متغير
           </summary>
           <form action={upsertVariant} className="flex flex-wrap gap-1.5 mt-1.5">
@@ -498,7 +498,7 @@ function ProductRow({
             />
             <button
               type="submit"
-              className="px-3 py-1.5 rounded bg-[#1E2A4A] text-white text-xs min-h-[32px]"
+              className="px-3 py-1.5 rounded bg-[#0F293E] text-white text-xs min-h-[32px]"
             >
               إضافة
             </button>
@@ -517,7 +517,7 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
       <div className="flex items-center justify-between px-2 py-1.5">
         <div className="flex items-center gap-2 text-xs">
           <span className="text-gray-700 font-medium">{variant.variant_name}</span>
-          <span className="text-[#F26522] font-semibold">{variant.price} ج</span>
+          <span className="text-[#E4570F] font-semibold">{variant.price} ج</span>
           <span
             className={`rounded px-1 py-0.5 ${
               variant.is_available
@@ -567,7 +567,7 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
 
       {/* Edit variant inline */}
       <details>
-        <summary className="px-2 py-1 text-[10px] text-[#1E2A4A] cursor-pointer list-none hover:bg-gray-100">
+        <summary className="px-2 py-1 text-[10px] text-[#0F293E] cursor-pointer list-none hover:bg-gray-100">
           ✏️ تعديل
         </summary>
         <form action={upsertVariant} className="px-2 py-2 flex flex-wrap gap-1.5 bg-blue-50/30">
@@ -606,7 +606,7 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
           </select>
           <button
             type="submit"
-            className="px-3 py-1.5 rounded bg-[#1E2A4A] text-white text-xs min-h-[32px]"
+            className="px-3 py-1.5 rounded bg-[#0F293E] text-white text-xs min-h-[32px]"
           >
             حفظ
           </button>

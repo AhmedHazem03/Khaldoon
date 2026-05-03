@@ -30,7 +30,7 @@ export function OfferImageUpload({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={isPending}
-        className="relative w-24 h-20 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-gray-50 hover:border-[#F26522] hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#F26522]/30 flex items-center justify-center group"
+        className="relative w-24 h-20 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-gray-50 hover:border-[#E4570F] hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#E4570F]/30 flex items-center justify-center group"
         title="اضغط لرفع صورة العرض"
       >
         {thumbUrl ? (
@@ -50,7 +50,7 @@ export function OfferImageUpload({
         </span>
         {isPending && (
           <span className="absolute inset-0 bg-white/70 flex items-center justify-center">
-            <span className="w-5 h-5 border-2 border-[#F26522] border-t-transparent rounded-full animate-spin" />
+            <span className="w-5 h-5 border-2 border-[#E4570F] border-t-transparent rounded-full animate-spin" />
           </span>
         )}
       </button>

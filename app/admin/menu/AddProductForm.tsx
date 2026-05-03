@@ -37,7 +37,7 @@ export function AddProductForm({ categoryId, categoryName }: { categoryId: strin
         <button
           type="button"
           onClick={() => imageInputRef.current?.click()}
-          className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 hover:border-[#F26522] hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#F26522]/30 flex items-center justify-center group flex-shrink-0"
+          className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 hover:border-[#E4570F] hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#E4570F]/30 flex items-center justify-center group flex-shrink-0"
           title="اضغط لاختيار صورة"
         >
           {preview ? (
@@ -155,7 +155,7 @@ export function AddProductForm({ categoryId, categoryName }: { categoryId: strin
           <button
             type="submit"
             disabled={isPending}
-            className="min-h-[44px] px-5 rounded-lg bg-[#F26522] text-white text-sm font-medium disabled:opacity-60 flex items-center gap-2"
+            className="min-h-[44px] px-5 rounded-lg bg-[#E4570F] text-white text-sm font-medium disabled:opacity-60 flex items-center gap-2"
           >
             {isPending && (
               <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />

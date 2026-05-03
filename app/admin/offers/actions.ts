@@ -3,14 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { revalidateTag } from "next/cache";
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/supabase-server";
 
 // ── Shared Cloudinary helper ──────────────────────────────────────────────────
 async function uploadToCloudinary(file: File, publicId: string, folder: string): Promise<string> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error("Cloudinary غير مهيأ — أضف CLOUDINARY_CLOUD_NAME و CLOUDINARY_API_KEY و CLOUDINARY_API_SECRET في ملف .env.local");
+  }
+
   const { v2: cloudinary } = await import("cloudinary");
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
     secure: true,
   });
 
@@ -48,6 +57,7 @@ function validateImageFile(file: File | null): { error: string } | null {
 // ── CRUD ──────────────────────────────────────────────────────────────────────
 
 export async function addOffer(formData: FormData) {
+  await requireAdmin();
   const supabase = await createServerClient();
   const title = (formData.get("title") as string | null)?.trim();
   const order_index = parseInt(formData.get("order_index") as string, 10) || 0;
@@ -77,6 +87,7 @@ export async function addOffer(formData: FormData) {
 }
 
 export async function updateOffer(formData: FormData) {
+  await requireAdmin();
   const supabase = await createServerClient();
   const id = formData.get("id") as string;
   const title = (formData.get("title") as string | null)?.trim();
@@ -110,6 +121,7 @@ export async function updateOffer(formData: FormData) {
 }
 
 export async function toggleOffer(offerId: string, isActive: boolean) {
+  await requireAdmin();
   const supabase = await createServerClient();
   await supabase.from("offers").update({ is_active: isActive }).eq("id", offerId);
   revalidatePath("/admin/offers");
@@ -117,6 +129,7 @@ export async function toggleOffer(offerId: string, isActive: boolean) {
 }
 
 export async function deleteOffer(offerId: string) {
+  await requireAdmin();
   const supabase = await createServerClient();
   await supabase.from("offers").delete().eq("id", offerId);
   revalidatePath("/admin/offers");
@@ -124,6 +137,7 @@ export async function deleteOffer(offerId: string) {
 }
 
 export async function updateOfferOrder(offerId: string, order_index: number) {
+  await requireAdmin();
   const supabase = await createServerClient();
   await supabase.from("offers").update({ order_index }).eq("id", offerId);
   revalidatePath("/admin/offers");
@@ -137,6 +151,7 @@ export async function uploadOfferImage(
   _prevState: { imageUrl: string | null; error: string | null } | null,
   formData: FormData
 ): Promise<{ imageUrl: string | null; error: string | null }> {
+  await requireAdmin();
   const file = formData.get("image") as File | null;
   const validationError = validateImageFile(file);
   if (validationError) return { imageUrl: null, error: validationError.error };
@@ -155,21 +170,34 @@ export async function uploadOfferImage(
 // ── Offer ↔ Products ─────────────────────────────────────────────────────────
 
 export async function addOfferProduct(formData: FormData) {
+  await requireAdmin();
   const supabase = await createServerClient();
   const offer_id = formData.get("offer_id") as string;
   const product_id = formData.get("product_id") as string;
+  const variant_id = (formData.get("variant_id") as string | null) || null;
 
   if (!offer_id || !product_id) return;
 
-  await supabase.from("offer_products").upsert(
-    { offer_id, product_id },
-    { onConflict: "offer_id,product_id", ignoreDuplicates: true }
-  );
+  // Check for duplicate considering variant_id (NULL-safe)
+  const dupeQuery = supabase
+    .from("offer_products")
+    .select("id")
+    .eq("offer_id", offer_id)
+    .eq("product_id", product_id);
 
+  const { data: existing } = await (variant_id
+    ? dupeQuery.eq("variant_id", variant_id)
+    : dupeQuery.is("variant_id", null)
+  ).maybeSingle();
+
+  if (existing) return;
+
+  await supabase.from("offer_products").insert({ offer_id, product_id, variant_id });
   revalidatePath("/admin/offers");
 }
 
 export async function removeOfferProduct(offerProductId: string) {
+  await requireAdmin();
   const supabase = await createServerClient();
   await supabase.from("offer_products").delete().eq("id", offerProductId);
   revalidatePath("/admin/offers");

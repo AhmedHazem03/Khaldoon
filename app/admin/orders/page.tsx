@@ -96,7 +96,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-[#1E2A4A]">الطلبات</h1>
+      <h1 className="text-xl font-bold text-[#0F293E]">الطلبات</h1>
 
       {/* Filters */}
       <form method="GET" className="flex flex-wrap gap-3">
@@ -105,13 +105,13 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
           name="q"
           defaultValue={q}
           placeholder="بحث بالكود، الاسم، أو الهاتف"
-          className="flex-1 min-w-[180px] rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E2A4A]"
+          className="flex-1 min-w-[180px] rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F293E]"
         />
         <select
           name="status"
           defaultValue={status}
           aria-label="فلترة بالحالة"
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E2A4A]"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F293E]"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -121,7 +121,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         </select>
         <button
           type="submit"
-          className="min-h-[44px] px-4 rounded-lg bg-[#1E2A4A] text-white text-sm font-medium"
+          className="min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-sm font-medium"
         >
           بحث
         </button>
@@ -142,7 +142,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         {cursor ? (
           <Link
             href={buildUrl({ cursor: undefined })}
-            className="text-[#1E2A4A] hover:underline"
+            className="text-[#0F293E] hover:underline"
           >
             ← الأحدث
           </Link>
@@ -152,7 +152,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         {nextCursor && (
           <Link
             href={buildUrl({ cursor: nextCursor })}
-            className="text-[#1E2A4A] hover:underline"
+            className="text-[#0F293E] hover:underline"
           >
             التالي →
           </Link>

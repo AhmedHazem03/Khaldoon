@@ -13,11 +13,11 @@ export default async function AdminZonesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-[#1E2A4A]">مناطق التوصيل</h1>
+      <h1 className="text-xl font-bold text-[#0F293E]">مناطق التوصيل</h1>
 
       {/* Add zone */}
       <section className="rounded-xl bg-white p-4 shadow-sm border border-gray-100">
-        <h2 className="text-sm font-semibold text-[#1E2A4A] mb-3">
+        <h2 className="text-sm font-semibold text-[#0F293E] mb-3">
           إضافة منطقة جديدة
         </h2>
         <form action={addZone} className="flex flex-wrap gap-2">
@@ -38,7 +38,7 @@ export default async function AdminZonesPage() {
           />
           <button
             type="submit"
-            className="min-h-[44px] px-4 rounded-lg bg-[#1E2A4A] text-white text-sm font-medium"
+            className="min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-sm font-medium"
           >
             إضافة
           </button>

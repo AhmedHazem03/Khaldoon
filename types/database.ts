@@ -400,6 +400,7 @@ export type Database = {
           id: string
           offer_id: string
           product_id: string | null
+          variant_id: string | null
           order_index: number
           created_at: string
         }
@@ -407,6 +408,7 @@ export type Database = {
           id?: string
           offer_id: string
           product_id?: string | null
+          variant_id?: string | null
           order_index?: number
           created_at?: string
         }
@@ -414,6 +416,7 @@ export type Database = {
           id?: string
           offer_id?: string
           product_id?: string | null
+          variant_id?: string | null
           order_index?: number
           created_at?: string
         }
@@ -430,6 +433,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_products_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           }
         ]
@@ -462,6 +472,9 @@ export type Database = {
           p_total: number
           p_order_data: Json
           p_items: Json
+          p_coupon_id?: string | null
+          p_offer_discount?: number
+          p_bonus_points?: number
         }
         Returns: string
       }
@@ -472,6 +485,10 @@ export type Database = {
           p_type: string
           p_note?: string
         }
+        Returns: void
+      }
+      increment_coupon_uses: {
+        Args: { p_coupon_id: string }
         Returns: void
       }
     }

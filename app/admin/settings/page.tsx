@@ -155,7 +155,7 @@ export default async function AdminSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-[#1E2A4A]">الإعدادات</h1>
+      <h1 className="text-xl font-bold text-[#0F293E]">الإعدادات</h1>
 
       <form action={saveSettings} className="space-y-6">
         {FIELD_GROUPS.map((group) => (
@@ -163,7 +163,7 @@ export default async function AdminSettingsPage() {
             key={group.title}
             className="rounded-xl bg-white p-4 shadow-sm border border-gray-100 space-y-4"
           >
-            <h2 className="text-sm font-semibold text-[#1E2A4A] border-b border-gray-100 pb-2">
+            <h2 className="text-sm font-semibold text-[#0F293E] border-b border-gray-100 pb-2">
               {group.title}
             </h2>
             {group.fields.map((field) => (
@@ -181,7 +181,7 @@ export default async function AdminSettingsPage() {
                   defaultValue={
                     settings[field.key as keyof typeof settings] ?? ""
                   }
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E2A4A]"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F293E]"
                   dir={field.type === "url" || field.type === "tel" ? "ltr" : undefined}
                 />
                 {field.hint && (
@@ -194,7 +194,7 @@ export default async function AdminSettingsPage() {
 
         <button
           type="submit"
-          className="w-full min-h-[52px] rounded-xl bg-[#1E2A4A] text-white font-semibold text-base"
+          className="w-full min-h-[52px] rounded-xl bg-[#0F293E] text-white font-semibold text-base"
         >
           حفظ جميع الإعدادات
         </button>

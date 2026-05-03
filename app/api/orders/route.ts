@@ -226,7 +226,6 @@ export async function POST(request: NextRequest) {
     // ── Coupon validation ──────────────────────────────────────────────────
     let couponId: string | null = null;
     let offerDiscount = 0;
-    let couponCurrentUses = 0;
     const rawCoupon = typeof coupon_code === "string" ? coupon_code.trim().toUpperCase() : null;
 
     if (rawCoupon) {
@@ -257,7 +256,6 @@ export async function POST(request: NextRequest) {
       } else if (coupon.benefit_type === "coupon_fixed") {
         offerDiscount = Math.min(Math.floor(coupon.benefit_value), subtotal);
       }
-      couponCurrentUses = coupon.uses_count ?? 0;
     }
 
     // ── Bonus points from multiplier offers ───────────────────────────────
@@ -353,12 +351,9 @@ export async function POST(request: NextRequest) {
         .eq("id", orderId as string)
         .single();
 
-      // Increment coupon uses_count atomically (best-effort)
+      // Increment coupon uses_count atomically via RPC (avoids read-modify-write race)
       if (couponId) {
-        await supabase
-          .from("offers")
-          .update({ uses_count: couponCurrentUses + 1 })
-          .eq("id", couponId);
+        await supabase.rpc("increment_coupon_uses", { p_coupon_id: couponId });
       }
 
       return NextResponse.json(
@@ -421,12 +416,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Increment coupon uses_count for guest orders
+    // Increment coupon uses_count atomically via RPC (avoids read-modify-write race)
     if (couponId) {
-      await supabase
-        .from("offers")
-        .update({ uses_count: couponCurrentUses + 1 })
-        .eq("id", couponId);
+      await supabase.rpc("increment_coupon_uses", { p_coupon_id: couponId });
     }
 
     return NextResponse.json(

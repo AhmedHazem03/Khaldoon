@@ -33,7 +33,7 @@ export function CategoryImageUpload({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={isPending}
-        className="relative w-12 h-12 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 hover:border-[#F26522] hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#F26522]/30 flex items-center justify-center group flex-shrink-0"
+        className="relative w-12 h-12 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 hover:border-[#E4570F] hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#E4570F]/30 flex items-center justify-center group flex-shrink-0"
         title="اضغط لرفع صورة القسم"
       >
         {thumbUrl ? (
@@ -53,7 +53,7 @@ export function CategoryImageUpload({
         </span>
         {isPending && (
           <span className="absolute inset-0 bg-white/70 flex items-center justify-center">
-            <span className="w-4 h-4 border-2 border-[#F26522] border-t-transparent rounded-full animate-spin" />
+            <span className="w-4 h-4 border-2 border-[#E4570F] border-t-transparent rounded-full animate-spin" />
           </span>
         )}
       </button>

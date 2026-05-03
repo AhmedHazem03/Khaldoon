@@ -18,7 +18,7 @@ export default function ZoneFeeEditor({
     return (
       <button
         onClick={() => setEditing(true)}
-        className="text-sm text-gray-700 hover:text-[#F26522] underline-offset-2 hover:underline"
+        className="text-sm text-gray-700 hover:text-[#E4570F] underline-offset-2 hover:underline"
       >
         {fee} ج
       </button>
@@ -48,7 +48,7 @@ export default function ZoneFeeEditor({
       <button
         type="submit"
         disabled={isPending}
-        className="text-xs px-2 py-1 rounded bg-[#1E2A4A] text-white"
+        className="text-xs px-2 py-1 rounded bg-[#0F293E] text-white"
       >
         حفظ
       </button>

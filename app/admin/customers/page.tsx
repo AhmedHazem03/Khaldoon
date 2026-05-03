@@ -6,6 +6,18 @@ export const metadata = { title: "العملاء — مطعم خلدون" };
 
 const PAGE_SIZE = 25;
 
+type UserRow = {
+  id: string;
+  name: string | null;
+  phone_number: string;
+  points_balance: number;
+  created_at: string;
+};
+
+type OrderCountRow = {
+  user_id: string | null;
+};
+
 interface PageProps {
   searchParams: Promise<{ q?: string; cursor?: string }>;
 }
@@ -31,9 +43,10 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
   }
 
   const { data: rawUsers } = await query;
+  const typedUsers = (rawUsers ?? []) as unknown as UserRow[];
 
-  const hasNextPage = (rawUsers?.length ?? 0) > PAGE_SIZE;
-  const users = (rawUsers ?? []).slice(0, PAGE_SIZE);
+  const hasNextPage = typedUsers.length > PAGE_SIZE;
+  const users = typedUsers.slice(0, PAGE_SIZE);
   const nextCursor = hasNextPage ? users[users.length - 1]?.created_at : null;
 
   // Fetch order counts for each user
@@ -42,15 +55,16 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
     .from("orders")
     .select("user_id")
     .in("user_id", userIds.length > 0 ? userIds : ["00000000-0000-0000-0000-000000000000"]);
+  const typedOrderCounts = (orderCounts ?? []) as unknown as OrderCountRow[];
 
   const countByUser: Record<string, number> = {};
-  for (const o of orderCounts ?? []) {
+  for (const o of typedOrderCounts) {
     if (o.user_id) countByUser[o.user_id] = (countByUser[o.user_id] ?? 0) + 1;
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-[#1E2A4A]">العملاء المسجلون</h1>
+      <h1 className="text-xl font-bold text-[#0F293E]">العملاء المسجلون</h1>
 
       {/* Search */}
       <form method="GET" className="flex gap-2">
@@ -59,11 +73,11 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
           name="q"
           defaultValue={q}
           placeholder="بحث بالاسم أو رقم الهاتف"
-          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E2A4A]"
+          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F293E]"
         />
         <button
           type="submit"
-          className="min-h-[44px] px-4 rounded-lg bg-[#1E2A4A] text-white text-sm font-medium"
+          className="min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-sm font-medium"
         >
           بحث
         </button>
@@ -82,7 +96,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
             {/* User info */}
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-[#1E2A4A]">
+                <p className="font-semibold text-[#0F293E]">
                   {user.name ?? "بدون اسم"}
                 </p>
                 <p className="text-sm text-gray-500" dir="ltr">
@@ -92,7 +106,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
               <div className="text-left text-sm space-y-0.5">
                 <div className="flex items-center gap-1">
                   <span className="text-gray-400 text-xs">النقاط:</span>
-                  <span className="font-bold text-[#F26522]">
+                  <span className="font-bold text-[#E4570F]">
                     {user.points_balance}
                   </span>
                 </div>
@@ -133,7 +147,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
           {hasNextPage && nextCursor && (
             <Link
               href={`/admin/customers?q=${encodeURIComponent(q)}&cursor=${encodeURIComponent(nextCursor)}`}
-              className="min-h-[44px] px-5 rounded-lg bg-[#1E2A4A] text-white text-sm flex items-center"
+              className="min-h-[44px] px-5 rounded-lg bg-[#0F293E] text-white text-sm flex items-center"
             >
               التالي
             </Link>

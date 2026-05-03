@@ -31,10 +31,10 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-[#FDF5EC]">
       {/* Admin top nav */}
-      <nav className="sticky top-0 z-50 bg-[#1E2A4A] text-white shadow-md">
+      <nav className="sticky top-0 z-50 bg-[#0F293E] text-white shadow-md">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-2">
-            <span className="text-xs font-bold text-[#F26522] ml-3 flex-shrink-0">
+            <span className="text-xs font-bold text-[#E4570F] ml-3 flex-shrink-0">
               Admin
             </span>
             {NAV_LINKS.map((link) => (

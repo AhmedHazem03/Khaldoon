@@ -62,3 +62,18 @@ export async function createServerClient() {
     }
   );
 }
+
+/**
+ * Verifies the caller is an admin (app_metadata.role === 'admin').
+ * Throws a Response-like Error that Next.js Server Actions can surface.
+ * Call at the top of every mutating admin Server Action.
+ */
+export async function requireAdmin(): Promise<void> {
+  const client = await createSessionClient();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user || user.app_metadata?.role !== "admin") {
+    throw new Error("غير مصرح");
+  }
+}

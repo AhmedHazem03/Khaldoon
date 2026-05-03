@@ -2,6 +2,10 @@ import { createServerClient } from "@/lib/supabase-server";
 import StatsCards from "@/components/admin/StatsCards";
 import Link from "next/link";
 
+type MonthOrder = { id: string; total_price: number };
+type RecentOrder = { id: string; order_code: string; customer_name: string; customer_phone: string; order_type: string; total_price: number; status: string; created_at: string };
+type TopItem = { product_name: string; quantity: number };
+
 export const metadata = { title: "لوحة التحكم — مطعم خلدون" };
 
 export default async function AdminDashboardPage() {
@@ -36,7 +40,8 @@ export default async function AdminDashboardPage() {
       .from("orders")
       .select("id, total_price")
       .gte("created_at", startOfMonth.toISOString())
-      .neq("status", "cancelled"),
+      .neq("status", "cancelled")
+      .returns<MonthOrder[]>(),
 
     supabase
       .from("users")
@@ -49,7 +54,8 @@ export default async function AdminDashboardPage() {
         "id, order_code, customer_name, customer_phone, order_type, total_price, status, created_at"
       )
       .order("created_at", { ascending: false })
-      .limit(5),
+      .limit(5)
+      .returns<RecentOrder[]>(),
   ]);
 
   // Fetch top items scoped to this month's non-cancelled orders
@@ -60,7 +66,8 @@ export default async function AdminDashboardPage() {
           .from("order_items")
           .select("product_name, quantity")
           .in("order_id", monthOrderIds)
-      : { data: [] as { product_name: string; quantity: number }[] };
+          .returns<TopItem[]>()
+      : { data: [] as TopItem[] };
 
   const totalRevenue =
     monthOrders?.reduce((sum, o) => sum + (o.total_price ?? 0), 0) ?? 0;
@@ -79,10 +86,10 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-[#1E2A4A]">لوحة التحكم</h1>
+        <h1 className="text-xl font-bold text-[#0F293E]">لوحة التحكم</h1>
         <Link
           href="/admin/orders"
-          className="text-sm text-[#F26522] hover:underline"
+          className="text-sm text-[#E4570F] hover:underline"
         >
           كل الطلبات ←
         </Link>
@@ -100,7 +107,7 @@ export default async function AdminDashboardPage() {
       {/* Recent orders preview */}
       {recentOrders && recentOrders.length > 0 && (
         <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-100">
-          <h3 className="text-sm font-semibold text-[#1E2A4A] mb-3">
+          <h3 className="text-sm font-semibold text-[#0F293E] mb-3">
             آخر الطلبات
           </h3>
           <div className="space-y-2">
@@ -109,7 +116,7 @@ export default async function AdminDashboardPage() {
                 key={o.id}
                 className="flex items-center justify-between text-sm"
               >
-                <span className="font-mono text-[#1E2A4A] font-semibold">
+                <span className="font-mono text-[#0F293E] font-semibold">
                   {o.order_code}
                 </span>
                 <span className="text-gray-600">{o.customer_name}</span>

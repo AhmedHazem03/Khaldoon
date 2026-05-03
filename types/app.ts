@@ -132,6 +132,7 @@ export interface OfferProduct {
   id: string;
   offer_id: string;
   product_id: string | null;
+  variant_id: string | null;
   order_index: number;
   products: {
     id: string;

@@ -28,7 +28,7 @@ export function MenuSearch({ defaultValue }: { defaultValue?: string }) {
         defaultValue={defaultValue ?? ""}
         onChange={(e) => handleSearch(e.target.value)}
         placeholder="ابحث عن منتج أو قسم..."
-        className={`w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm pe-10 focus:outline-none focus:ring-2 focus:ring-[#1E2A4A]/20 transition-opacity ${
+        className={`w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm pe-10 focus:outline-none focus:ring-2 focus:ring-[#0F293E]/20 transition-opacity ${
           isPending ? "opacity-60" : ""
         }`}
         dir="rtl"

@@ -2,7 +2,6 @@ import { createServerClient } from "@/lib/supabase-server";
 import { getSettings } from "@/lib/settings";
 import OffersCarousel from "@/components/ui/OffersCarousel";
 import HeroSection from "@/components/home/HeroSection";
-import SocialProofBar from "@/components/home/SocialProofBar";
 import MenuShowcase from "@/components/home/MenuShowcase";
 import LoyaltySection from "@/components/home/LoyaltySection";
 import BrandStory from "@/components/home/BrandStory";
@@ -31,7 +30,11 @@ export default async function HomePage() {
   ]);
 
   const [{ data: offersData }, { data: categoriesData }] = await Promise.all([
-    supabase.from("offers").select("*").eq("is_active", true).order("order_index"),
+    supabase
+      .from("offers")
+      .select("*, offer_products(id, product_id, order_index, products(id, name, image_url))")
+      .eq("is_active", true)
+      .order("order_index"),
     supabase.from("categories").select("*").eq("is_visible", true).order("order_index"),
   ]);
 
@@ -40,39 +43,7 @@ export default async function HomePage() {
   const visibleCategories = (categoriesData as Category[]) ?? [];
 
   // ── Build Social Proof stats from settings ──────────────────────────────
-  const proofStats = [
-    settings.stat_followers && {
-      icon: "📱",
-      numericValue: parseInt(settings.stat_followers.replace(/[^\d]/g, ""), 10) || 0,
-      suffix: "K+",
-      label: "متابع",
-    },
-    {
-      icon: "⭐",
-      numericValue: parseFloat(settings.stat_rating || "4.9"),
-      decimals: 1,
-      suffix: "/5",
-      label: "تقييم",
-    },
-    {
-      icon: "🛵",
-      numericValue: parseInt(settings.stat_delivery_time || "30", 10),
-      suffix: " دقيقة",
-      label: "توصيل",
-    },
-    settings.stat_customers && {
-      icon: "🍽️",
-      numericValue: parseInt(settings.stat_customers.replace(/[^\d]/g, ""), 10) || 0,
-      suffix: "+",
-      label: "عميل سعيد",
-    },
-  ].filter(Boolean) as {
-    icon: string;
-    numericValue: number;
-    decimals?: number;
-    suffix: string;
-    label: string;
-  }[];
+   
 
   return (
     <main className="overflow-x-hidden">
@@ -84,29 +55,22 @@ export default async function HomePage() {
         establishedYear={settings.established_year || undefined}
       />
 
-      {/* ══ 2. SOCIAL PROOF BAR ══════════════════════════════════════════════ */}
-      <SocialProofBar stats={proofStats} />
+      
 
       {/* ══ 3. OFFERS CAROUSEL ═══════════════════════════════════════════════ */}
       {activeOffers.length > 0 && (
-        <section className="py-10 bg-background">
-          <div className="flex items-center justify-between px-4 mb-5">
-            <div>
-              <span className="text-accent text-xs font-bold tracking-widest uppercase block mb-1">
-                لفترة محدودة
-              </span>
-              <h2 className="text-xl font-black text-text">العروض الحصرية</h2>
+        <section className="relative isolate overflow-hidden bg-[#081723] py-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(242,101,34,0.22),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_24%)]" />
+
+          <div className="relative mx-auto max-w-6xl px-4">
+            <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#0c2233_0%,#081723_100%)] shadow-[0_24px_60px_rgba(3,10,18,0.34)]">
+              <div className="px-3 py-4 sm:px-4 sm:py-5">
+                <OffersCarousel offers={activeOffers} />
+              </div>
             </div>
-            <span className="text-xs text-accent font-bold bg-accent/10 px-3 py-1.5 rounded-full border border-accent/20">
-              {activeOffers.length} عرض
-            </span>
-          </div>
-          <div className="px-4">
-            <OffersCarousel offers={activeOffers} />
           </div>
         </section>
       )}
-
       {/* ══ 4. MENU SHOWCASE ═════════════════════════════════════════════════ */}
       <MenuShowcase categories={visibleCategories} />
 

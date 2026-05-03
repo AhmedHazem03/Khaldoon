@@ -99,7 +99,7 @@ export function OfferEditForm({ offer, updateAction }: Props) {
       {/* Coupon-specific fields */}
       {isCoupon && (
         <div className="space-y-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
-          <p className="text-xs font-semibold text-[#F26522]">إعدادات الكوبون</p>
+          <p className="text-xs font-semibold text-[#E4570F]">إعدادات الكوبون</p>
           <input
             type="text"
             name="coupon_code"
@@ -152,7 +152,7 @@ export function OfferEditForm({ offer, updateAction }: Props) {
 
       <button
         type="submit"
-        className="w-full min-h-[44px] px-4 rounded-lg bg-[#1E2A4A] text-white text-xs font-medium"
+        className="w-full min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-xs font-medium"
       >
         حفظ التعديلات
       </button>

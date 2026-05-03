@@ -66,15 +66,16 @@ export async function mergeGuestOrders(
   const supabase = await createServerClient();
 
   // Resolve the public user row (orders.user_id FK → public.users.id, not auth.users.id)
-  const { data: publicUser } = await supabase
+  const { data: rawPublicUser } = await supabase
     .from("users")
     .select("id")
     .eq("auth_id", authId)
     .single();
 
+  const publicUser = rawPublicUser as { id: string } | null;
   if (!publicUser) return;
 
-  await supabase
+  await (supabase as any)
     .from("orders")
     .update({ user_id: publicUser.id })
     .eq("guest_token", guestToken)

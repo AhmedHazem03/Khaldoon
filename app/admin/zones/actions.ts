@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerClient, requireAdmin } from "@/lib/supabase-server";
 
 export async function addZone(formData: FormData) {
+  await requireAdmin();
   const supabase = await createServerClient();
   const zone_name = (formData.get("zone_name") as string).trim();
   const fee = parseInt(formData.get("fee") as string, 10);
@@ -17,6 +18,7 @@ export async function addZone(formData: FormData) {
 }
 
 export async function updateZoneFee(zoneId: string, fee: number) {
+  await requireAdmin();
   const supabase = await createServerClient();
   await supabase.from("delivery_zones").update({ fee }).eq("id", zoneId);
   revalidatePath("/admin/zones");
@@ -25,6 +27,7 @@ export async function updateZoneFee(zoneId: string, fee: number) {
 }
 
 export async function toggleZone(zoneId: string, isActive: boolean) {
+  await requireAdmin();
   const supabase = await createServerClient();
   await supabase
     .from("delivery_zones")

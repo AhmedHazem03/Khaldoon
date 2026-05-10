@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerClient, requireAdmin } from "@/lib/supabase-server";
 
 const VALID_STATUSES = [
   "pending",
@@ -18,6 +18,8 @@ export async function updateOrderStatus(
   orderId: string,
   newStatus: string
 ): Promise<void> {
+  await requireAdmin();
+
   // Validate status value at system boundary
   if (!VALID_STATUSES.includes(newStatus as OrderStatus)) {
     throw new Error("Invalid order status");

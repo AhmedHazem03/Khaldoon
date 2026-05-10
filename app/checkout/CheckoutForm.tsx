@@ -7,8 +7,8 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/stores/cart";
 import { calcPointsEarned } from "@/lib/points";
+import { generateWhatsAppMessage, buildWhatsAppURL } from "@/lib/whatsapp";
 import OrderSummary from "@/components/checkout/OrderSummary";
-import WhatsappButton from "@/components/checkout/WhatsappButton";
 import PointsSlider from "@/components/checkout/PointsSlider";
 import type { Settings } from "@/types/app";
 
@@ -54,6 +54,7 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
   const items = useCartStore((s) => s.items);
   const subtotal = useCartStore((s) => s.subtotal());
   const clearCart = useCartStore((s) => s.clearCart);
+  const updateItemPrice = useCartStore((s) => s.updateItemPrice);
   const storedCoupon = useCartStore((s) => s.couponCode);
   const storedCouponDiscount = useCartStore((s) => s.couponDiscount);
   const setCoupon = useCartStore((s) => s.setCoupon);
@@ -77,28 +78,15 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponApplying, setCouponApplying] = useState(false);
   const [autofilled, setAutofilled] = useState(false);
-  const [savedOrder, setSavedOrder] = useState<{
-    id: string;
-    order_code: string;
-    subtotal: number;
-    delivery_fee: number;
-    discount_amount: number;
-    offer_discount: number;
-    total_price: number;
-  } | null>(null);
-  const [savedFormData, setSavedFormData] = useState<{
-    name: string;
-    phone: string;
-    address?: string;
-    notes?: string;
-  } | null>(null);
-  const [savedItems, setSavedItems] = useState<typeof items>([]);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [priceWarning, setPriceWarning] = useState<string | null>(null);
 
   const isOrderingOpen = settings.is_ordering_open !== "false";
   const total = Math.max(0, subtotal + orderConfig.deliveryFee - pointsDiscount - couponDiscount);
+  const pointsEarned = userProfile
+    ? calcPointsEarned(subtotal, Number(settings.points_per_100_egp ?? "1"))
+    : 0;
 
   const {
     register,
@@ -142,15 +130,19 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
     setAutofilled(true);
   }
 
-  // Stale price check
+  // Redirect to cart if it becomes empty
   useEffect(() => {
-    if (items.length === 0) {
-      router.replace("/cart");
-      return;
-    }
+    if (items.length === 0) router.replace("/cart");
+  }, [items, router]);
 
+  // One-time stale price check on mount.
+  // Reads items via getState() so updating prices doesn't re-trigger this effect.
+  useEffect(() => {
     async function checkPrices() {
-      const productIds = [...new Set(items.map((i) => i.product_id))];
+      const snapshot = useCartStore.getState().items;
+      if (snapshot.length === 0) return;
+
+      const productIds = [...new Set(snapshot.map((i) => i.product_id))];
       try {
         const res = await fetch(
           `/api/products/prices?ids=${productIds.join(",")}`
@@ -162,7 +154,7 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
           price: number;
         }> = await res.json();
 
-        const changed = items.filter((item) => {
+        const changed = snapshot.filter((item) => {
           const server = data.find(
             (d) =>
               d.id === item.product_id &&
@@ -172,8 +164,16 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
         });
 
         if (changed.length > 0) {
+          for (const item of changed) {
+            const server = data.find(
+              (d) =>
+                d.id === item.product_id &&
+                (d.variant_id ?? null) === item.variant_id
+            );
+            if (server) updateItemPrice(item.product_id, item.variant_id, server.price);
+          }
           const names = changed.map((i) => i.product_name).join("، ");
-          setPriceWarning(`تغيّر سعر: ${names}. يُرجى مراجعة الطلب.`);
+          setPriceWarning(`تغيّر سعر: ${names} — تم تحديث الإجمالي تلقائياً.`);
         }
       } catch {
         // non-critical
@@ -181,7 +181,8 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
     }
 
     checkPrices();
-  }, [items, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onSubmit(data: FormData) {
     if (orderConfig.orderType === "delivery" && !data.address) {
@@ -191,6 +192,10 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
 
     setSaving(true);
     setErrorMsg(null);
+
+    // Open a blank window NOW (still inside the user gesture) so the browser
+    // won't block it after the async fetch completes.
+    const waWindow = window.open("", "_blank");
 
     const guestToken = sessionStorage.getItem("guest_token") ?? undefined;
 
@@ -205,11 +210,9 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
           order_type: orderConfig.orderType,
           zone_id: orderConfig.zoneId || null,
           notes: data.notes ?? null,
-          // Registered user fields
           is_registered: !!userProfile,
           points_to_use: userProfile ? Math.round(pointsDiscount / pointValue) : 0,
           coupon_code: couponInput.trim().toUpperCase() || undefined,
-          // Guest field (ignored for registered users)
           guest_token: guestToken,
           items: items.map((item) => ({
             product_id: item.product_id,
@@ -223,72 +226,55 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
       });
 
       if (!res.ok) {
+        waWindow?.close();
         const body = await res.json().catch(() => ({}));
         setErrorMsg(body.error ?? "حدث خطأ، حاول مرة أخرى");
         return;
       }
 
       const result = await res.json();
-      const itemsSnapshot = [...items]; // snapshot before clear
+      const itemsSnapshot = [...items];
       clearCart();
-      setSavedItems(itemsSnapshot);
-      setSavedFormData(data);
-      setSavedOrder({
-        id: result.id,
+
+      const earnedPoints = calcPointsEarned(
+        result.subtotal ?? subtotal,
+        Number(settings.points_per_100_egp ?? "1")
+      );
+      const orderForWA = {
         order_code: result.order_code,
+        order_type: orderConfig.orderType,
         subtotal: result.subtotal ?? subtotal,
         delivery_fee: result.delivery_fee ?? orderConfig.deliveryFee,
         discount_amount: result.discount_amount ?? pointsDiscount,
         offer_discount: result.offer_discount ?? couponDiscount,
         total_price: result.total_price ?? total,
-      });
+        points_used: Math.round((result.discount_amount ?? pointsDiscount) / pointValue),
+        points_earned: earnedPoints,
+        customer_name: data.name,
+        customer_phone: data.phone,
+        delivery_address: data.address ?? null,
+        notes: data.notes ?? null,
+      };
+
+      const message = generateWhatsAppMessage(orderForWA, itemsSnapshot, settings);
+      const waUrl = buildWhatsAppURL(settings.whatsapp_order_number, message, result.order_code);
+
+      sessionStorage.setItem("khaldoun-last-wa-url", waUrl);
+      sessionStorage.setItem("khaldoun-pending-order-id", result.id);
+
+      if (waWindow) {
+        waWindow.location.href = waUrl;
+      } else {
+        window.open(waUrl, "_blank", "noopener,noreferrer");
+      }
+
+      router.push(`/order-confirm?orderId=${result.id}`);
     } catch {
+      waWindow?.close();
       setErrorMsg("حدث خطأ في الشبكة، حاول مرة أخرى");
     } finally {
       setSaving(false);
     }
-  }
-
-  // Order saved — show WhatsApp button
-  if (savedOrder && savedFormData) {
-    // M4: use calcPointsEarned() helper — no formula duplication
-    const pointsEarned = calcPointsEarned(
-      savedOrder.subtotal,
-      Number(settings.points_per_100_egp ?? "1")
-    );
-    const orderForWA = {
-      order_code: savedOrder.order_code,
-      order_type: orderConfig.orderType,
-      subtotal: savedOrder.subtotal,
-      delivery_fee: savedOrder.delivery_fee,
-      discount_amount: savedOrder.discount_amount,
-      offer_discount: savedOrder.offer_discount,
-      total_price: savedOrder.total_price,
-      points_used: Math.round(savedOrder.discount_amount / pointValue),
-      points_earned: pointsEarned,
-      customer_name: savedFormData.name,
-      customer_phone: savedFormData.phone,
-      delivery_address: savedFormData.address ?? null,
-      notes: savedFormData.notes ?? null,
-    };
-
-    return (
-      <div className="max-w-lg mx-auto px-4 pt-8 pb-32 text-center space-y-6">
-        <div className="text-5xl">✅</div>
-        <h2 className="text-xl font-bold text-text">
-          تم حفظ طلبك #{savedOrder.order_code}
-        </h2>
-        <p className="text-sm text-gray-500">
-          أرسل طلبك الآن عبر واتساب لنبدأ في التحضير
-        </p>
-        <WhatsappButton
-          order={orderForWA}
-          items={savedItems}
-          settings={settings}
-          orderId={savedOrder.id}
-        />
-      </div>
-    );
   }
 
   if (!isOrderingOpen) {
@@ -476,6 +462,7 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
           discount={pointsDiscount}
           offerDiscount={couponDiscount}
           total={total}
+          pointsEarned={pointsEarned > 0 ? pointsEarned : undefined}
         />
 
         {errorMsg && (

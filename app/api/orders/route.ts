@@ -29,9 +29,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Fetch settings once — reused throughout this request
+    const settings = await getSettings();
+
     // Reject orders when restaurant has closed ordering
-    const earlySettings = await getSettings();
-    if (earlySettings.is_ordering_open === "false") {
+    if (settings.is_ordering_open === "false") {
       return NextResponse.json(
         { error: "الطلبات مغلقة حالياً، شكراً لتفهمك" },
         { status: 503 }
@@ -268,8 +270,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Bonus points from multiplier offers ───────────────────────────────
-    const routeSettings = await getSettings();
-    const pointsPerHundred = Number(routeSettings.points_per_100_egp ?? "1");
+    const pointsPerHundred = Number(settings.points_per_100_egp ?? "1");
     let bonusPoints = 0;
     for (const item of orderItems) {
       const offer = productOfferMap.get(item.product_id);
@@ -330,7 +331,7 @@ export async function POST(request: NextRequest) {
       }
 
       const pointsToUse = Math.max(0, Number(points_to_use) || 0);
-      const pointValueEgp = Number(routeSettings.point_value_egp ?? "0.5");
+      const pointValueEgp = Number(settings.point_value_egp ?? "0.5");
       const discount = Math.floor(pointsToUse * pointValueEgp);
       const totalPrice = Math.max(0, subtotal + deliveryFee - discount - offerDiscount);
 

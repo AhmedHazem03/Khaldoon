@@ -1,10 +1,12 @@
 "use server";
 
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerClient, requireAdmin } from "@/lib/supabase-server";
 
 export async function promoteToAdmin(
   userId: string
 ): Promise<{ success: true } | { error: string }> {
+  await requireAdmin();
+
   const supabase = await createServerClient();
 
   const { error } = await supabase.auth.admin.updateUserById(userId, {

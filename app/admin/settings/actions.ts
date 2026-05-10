@@ -49,7 +49,7 @@ export async function saveSettings(formData: FormData) {
   }
 
   // Invalidate the cross-request settings cache so all pages pick up new values
-  revalidateTag("settings");
+  revalidateTag("settings", "default");
   revalidatePath("/admin/settings");
   revalidatePath("/");
 }

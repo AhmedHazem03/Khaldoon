@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerClient, requireAdmin } from "@/lib/supabase-server";
 
 interface AdjustPointsInput {
   userId: string;
@@ -16,6 +16,8 @@ export async function adjustPoints({
   type,
   note,
 }: AdjustPointsInput): Promise<{ success: boolean; error?: string }> {
+  await requireAdmin();
+
   // Validate at system boundary
   if (!amount || amount <= 0) {
     return { success: false, error: "المبلغ يجب أن يكون أكبر من صفر" };

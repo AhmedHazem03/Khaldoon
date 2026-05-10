@@ -6,7 +6,7 @@ import { createServerClient, createSessionClient } from "@/lib/supabase-server";
 
 type CancelResult =
   | { success: true }
-  | { error: "unauthorized" | "not_found" | "window_expired" | "already_cancelled" };
+  | { error: "unauthorized" | "not_found" | "invalid_status" | "window_expired" | "already_cancelled" };
 
 /**
  * Cancel a pending order.
@@ -49,7 +49,7 @@ export async function cancelOrder(orderId: string): Promise<CancelResult> {
     return { error: "already_cancelled" };
   }
   if (order.status !== "pending") {
-    return { error: "not_found" };
+    return { error: "invalid_status" };
   }
 
   const ageMs = Date.now() - new Date(order.created_at).getTime();
@@ -63,6 +63,7 @@ export async function cancelOrder(orderId: string): Promise<CancelResult> {
     .update({ status: "cancelled" })
     .eq("id", orderId);
 
+  revalidatePath("/profile");
   return { success: true };
 }
 
@@ -90,7 +91,7 @@ export async function updateProfile(data: {
     .from("users")
     .update({
       name: data.name.trim() || null,
-      phone_number: data.phone_number.trim() || null,
+      phone_number: data.phone_number.trim() || undefined,
       default_address: data.default_address.trim() || null,
     })
     .eq("auth_id", authUser.id);

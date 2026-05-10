@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createServerClient } from "@/lib/supabase-server";
 import { getSettings } from "@/lib/settings";
 import MenuClient from "./MenuClient";
@@ -60,11 +61,13 @@ export default async function MenuPage() {
   const whatsappUrl = `https://wa.me/${settings.whatsapp_order_number}`;
 
   return (
-    <MenuClient
-      categories={(categories as Category[]) ?? []}
-      products={(products as Product[]) ?? []}
-      productOfferMap={productOfferMap}
-      whatsappUrl={whatsappUrl}
-    />
+    <Suspense>
+      <MenuClient
+        categories={(categories as Category[]) ?? []}
+        products={(products as Product[]) ?? []}
+        productOfferMap={productOfferMap}
+        whatsappUrl={whatsappUrl}
+      />
+    </Suspense>
   );
 }

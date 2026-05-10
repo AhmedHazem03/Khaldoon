@@ -134,12 +134,6 @@ export default function HeroSection({
         </div>
       </div>
 
-      {/* Wave divider */}
-      <div className="absolute bottom-0 inset-x-0 pointer-events-none">
-        <svg viewBox="0 0 390 56" preserveAspectRatio="none" className="w-full h-14 fill-background">
-          <path d="M0,28 Q65,56 130,28 Q195,0 260,28 Q325,56 390,28 L390,56 L0,56 Z" />
-        </svg>
-      </div>
     </section>
   );
 }

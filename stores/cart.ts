@@ -15,6 +15,7 @@ interface CartState {
     variantId: string | null,
     quantity: number
   ) => void;
+  updateItemPrice: (productId: string, variantId: string | null, newPrice: number) => void;
   clearCart: () => void;
   setCoupon: (code: string | null, discount: number) => void;
   totalItems: () => number;
@@ -69,6 +70,14 @@ export const useCartStore = create<CartState>()(
         set((state) => ({
           items: state.items.map((i) =>
             isSameItem(i, productId, variantId) ? { ...i, quantity } : i
+          ),
+        }));
+      },
+
+      updateItemPrice(productId, variantId, newPrice) {
+        set((state) => ({
+          items: state.items.map((i) =>
+            isSameItem(i, productId, variantId) ? { ...i, unit_price: newPrice } : i
           ),
         }));
       },

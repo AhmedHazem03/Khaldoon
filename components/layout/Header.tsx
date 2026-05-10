@@ -11,7 +11,7 @@ export default function Header() {
   const totalItems = useCartStore((state) => state.totalItems());
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(!isHome);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -30,21 +30,25 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handler);
   }, [isHome]);
 
+  const isTransparentOnHero = isHome && !scrolled;
+
   return (
-    <header className={`sticky top-0 z-50 transition-all duration-400 ${
-  scrolled
-    ? "bg-[#0f293e] shadow-[0_2px_20px_rgba(15,41,62,0.4)] backdrop-blur-sm"
-    : "bg-transparent"
-}`}>
+    <header
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-[#D85714] shadow-[0_2px_20px_rgba(216,87,20,0.42)] backdrop-blur-sm"
+          : "bg-gradient-to-t from-[#F47A2A]/95 via-[#D85714]/80 to-[#8F340B]/35"
+      }`}
+    >
   <div className="flex items-center justify-between px-4 h-14 max-w-2xl mx-auto">
 
     <Link href="/" className="flex items-center" aria-label="مطعم خلدون — الرئيسية">
       <Image
-        src="/logos/logo khaldon-01.png"
+        src="/logos/logo khaldon-02.png"
         alt="مطعم خلدون"
-        width={90}
-        height={40}
-        className="h-33 w-auto object-contain"
+        width={80}
+        height={35}
+        className="h-28 w-auto object-contain"
         priority
       />
     </Link>
@@ -53,21 +57,21 @@ export default function Header() {
       <Link
         href="/profile"
         className={`flex items-center justify-center w-11 h-11 rounded-full transition-colors active:scale-95 ${
-          scrolled ? "hover:bg-white/10" : "hover:bg-[#0f293e]/10"
+          isTransparentOnHero ? "hover:bg-white/15" : "hover:bg-white/10"
         }`}
         aria-label="حسابي"
       >
-        <UserCircle className={`w-6 h-6 ${scrolled ? "text-white" : "text-[#0f293e]"}`} />
+        <UserCircle className="w-6 h-6 text-white" />
       </Link>
 
       <Link
         href="/cart"
         className={`relative flex items-center justify-center w-11 h-11 rounded-full transition-colors active:scale-95 ${
-          scrolled ? "hover:bg-white/10" : "hover:bg-[#0f293e]/10"
+          isTransparentOnHero ? "hover:bg-white/15" : "hover:bg-white/10"
         }`}
         aria-label={`سلة الطلبات${mounted && totalItems > 0 ? ` — ${totalItems} صنف` : ""}`}
       >
-        <ShoppingCart className={`w-6 h-6 ${scrolled ? "text-white" : "text-[#0f293e]"}`} />
+        <ShoppingCart className="w-6 h-6 text-white" />
         {mounted && totalItems > 0 && (
           <span className="absolute -top-0.5 -left-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-accent text-white text-xs font-black px-1 leading-none shadow-md">
             {totalItems > 99 ? "99+" : totalItems}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import CategoryTabs from "@/components/menu/CategoryTabs";
 import ProductCard from "@/components/menu/ProductCard";
 import type { Category, Product, ActiveProductOffer } from "@/types/app";
@@ -18,8 +19,21 @@ export default function MenuClient({
   productOfferMap,
   whatsappUrl,
 }: MenuClientProps) {
-  const [activeCatId, setActiveCatId] = useState(categories[0]?.id ?? "");
+  const searchParams = useSearchParams();
+  const requestedCat = searchParams.get("category") ?? "";
+  const validInitialCat = categories.some((c) => c.id === requestedCat)
+    ? requestedCat
+    : (categories[0]?.id ?? "");
+
+  const [activeCatId, setActiveCatId] = useState(validInitialCat);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const didScrollRef = useRef(false);
+
+  useEffect(() => {
+    if (didScrollRef.current || !requestedCat) return;
+    didScrollRef.current = true;
+    sectionRefs.current[requestedCat]?.scrollIntoView({ behavior: "instant", block: "start" });
+  }, [requestedCat]);
 
   function scrollToCategory(id: string) {
     setActiveCatId(id);

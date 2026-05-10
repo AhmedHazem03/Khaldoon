@@ -3,6 +3,28 @@ import { createServerClient } from "@/lib/supabase-server";
 import type { Database } from "@/types/database";
 
 export async function POST(req: NextRequest) {
+  // Rate limiting — 20 attempts / minute / IP (stricter than orders: pure lookup, no order required)
+  if (process.env.KV_REST_API_URL) {
+    try {
+      const { kv } = await import("@vercel/kv");
+      const ip =
+        req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+        req.headers.get("x-real-ip") ??
+        "unknown";
+      const key = `rate:coupon:${ip}`;
+      const count = await kv.incr(key);
+      if (count === 1) await kv.expire(key, 60);
+      if (count > 20) {
+        return NextResponse.json(
+          { error: "محاولات كثيرة جداً، انتظر دقيقة وحاول مجدداً" },
+          { status: 429 }
+        );
+      }
+    } catch {
+      // KV failure must not block coupon validation — fail open
+    }
+  }
+
   let body: { coupon_code?: string; subtotal?: number };
   try {
     body = await req.json();

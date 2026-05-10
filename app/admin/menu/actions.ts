@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerClient, requireAdmin } from "@/lib/supabase-server";
 
 // ── Shared Cloudinary helper ──────────────────────────────────────────────────
 async function uploadToCloudinary(
@@ -52,6 +52,7 @@ function validateImageFile(
 }
 
 export async function upsertCategory(formData: FormData) {
+  await requireAdmin();
   const supabase = await createServerClient();
   const id = formData.get("id") as string | null;
   const name = (formData.get("name") as string).trim();
@@ -73,16 +74,20 @@ export async function upsertCategory(formData: FormData) {
   }
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
+  revalidatePath("/");
 }
 
 export async function deleteCategory(categoryId: string) {
+  await requireAdmin();
   const supabase = await createServerClient();
   await supabase.from("categories").delete().eq("id", categoryId);
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
+  revalidatePath("/");
 }
 
 export async function upsertProduct(formData: FormData) {
+  await requireAdmin();
   const supabase = await createServerClient();
   const id = formData.get("id") as string | null;
   const category_id = formData.get("category_id") as string;
@@ -116,6 +121,7 @@ export async function upsertProduct(formData: FormData) {
 }
 
 export async function deleteProduct(productId: string) {
+  await requireAdmin();
   const supabase = await createServerClient();
   await supabase.from("products").delete().eq("id", productId);
   revalidatePath("/admin/menu");
@@ -123,6 +129,7 @@ export async function deleteProduct(productId: string) {
 }
 
 export async function upsertVariant(formData: FormData) {
+  await requireAdmin();
   const supabase = await createServerClient();
   const id = formData.get("id") as string | null;
   const product_id = formData.get("product_id") as string;
@@ -148,6 +155,7 @@ export async function upsertVariant(formData: FormData) {
 }
 
 export async function deleteVariant(variantId: string) {
+  await requireAdmin();
   const supabase = await createServerClient();
   await supabase.from("product_variants").delete().eq("id", variantId);
   revalidatePath("/admin/menu");
@@ -159,6 +167,7 @@ export async function uploadProductImage(
   _prevState: { imageUrl: string | null; error: string | null } | null,
   formData: FormData
 ): Promise<{ imageUrl: string | null; error: string | null }> {
+  await requireAdmin();
   const file = formData.get("image") as File | null;
   const validationError = validateImageFile(file);
   if (validationError) return { imageUrl: null, error: validationError.error };
@@ -179,6 +188,7 @@ export async function uploadCategoryImage(
   _prevState: { imageUrl: string | null; error: string | null } | null,
   formData: FormData
 ): Promise<{ imageUrl: string | null; error: string | null }> {
+  await requireAdmin();
   const file = formData.get("image") as File | null;
   const validationError = validateImageFile(file);
   if (validationError) return { imageUrl: null, error: validationError.error };
@@ -198,6 +208,7 @@ export async function addProductWithImage(
   _prevState: { error: string | null } | null,
   formData: FormData
 ): Promise<{ error: string | null }> {
+  await requireAdmin();
   const supabase = await createServerClient();
 
   const category_id = formData.get("category_id") as string;

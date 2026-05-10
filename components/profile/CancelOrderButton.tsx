@@ -5,7 +5,8 @@ import { cancelOrder } from "@/app/profile/actions";
 
 const ERROR_MESSAGES: Record<string, string> = {
   window_expired: "انتهت مدة الإلغاء (5 دقائق من الطلب)",
-  not_found: "الطلب غير موجود أو تم تغيير حالته",
+  not_found: "الطلب غير موجود",
+  invalid_status: "لا يمكن إلغاء الطلب بعد تأكيده",
   already_cancelled: "الطلب ملغى مسبقاً",
   unauthorized: "غير مصرح بهذا الإجراء",
 };

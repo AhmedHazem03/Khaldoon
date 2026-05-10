@@ -194,7 +194,6 @@ export default async function OfferDetailsPage({
                 if (!product) return null;
 
                 const allVariants = product.product_variants?.filter((v) => v.is_available) ?? [];
-                // If this offer link targets a specific variant, show only that variant
                 const variants = item.variant_id
                   ? allVariants.filter((v) => v.id === item.variant_id)
                   : allVariants;

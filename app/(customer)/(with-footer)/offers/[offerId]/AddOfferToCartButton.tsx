@@ -35,7 +35,6 @@ export default function AddOfferToCartButton({ products, benefitType, benefitVal
       const availableVariants = product.product_variants?.filter((v) => v.is_available) ?? [];
 
       if (availableVariants.length > 0) {
-        // Add the first available variant
         const variant = availableVariants[0];
         const unitPrice = getDiscountedPrice(variant.price, benefitType, benefitValue);
         itemsToAdd.push({

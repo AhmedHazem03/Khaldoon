@@ -79,15 +79,15 @@ export default function HeroSection({
             transition-all duration-700 delay-300
             ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
         >
-          طعم ما بيُنسى{establishedYear ? ` منذ ${establishedYear}` : ""}
+          بدأ "خلدون السوري" منذ التسعينات
         </p>
         <p
           className={`text-white/85 text-sm leading-relaxed mb-10 max-w-[270px]
             transition-all duration-700 delay-400
             ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
         >
-          نكهات شامية أصيلة مطبوخة بحب —<br />
-          بتوصلك طازجة وحارّة على بابك
+          وتميز بتقديم ألذ وأشهى الأطباق<br />
+          المشهورة بتوابل خلدون السحرية
         </p>
 
         {/* CTA buttons */}

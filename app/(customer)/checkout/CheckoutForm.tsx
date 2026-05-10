@@ -51,8 +51,12 @@ interface OrderConfig {
 
 export default function CheckoutForm({ settings, userProfile }: CheckoutFormProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const items = useCartStore((s) => s.items);
-  const subtotal = useCartStore((s) => s.subtotal());
+  const _subtotal = useCartStore((s) => s.subtotal());
+  const subtotal = mounted ? _subtotal : 0;
   const clearCart = useCartStore((s) => s.clearCart);
   const updateItemPrice = useCartStore((s) => s.updateItemPrice);
   const storedCoupon = useCartStore((s) => s.couponCode);

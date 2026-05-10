@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 import { Cairo } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import FloatingWhatsapp from "@/components/ui/FloatingWhatsapp";
-import GuestTokenInit from "@/components/ui/GuestTokenInit";
-import { getSettings } from "@/lib/settings";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -42,21 +37,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await getSettings();
-
   return (
     <html lang="ar" dir="rtl" className={cairo.variable}>
       <body className="font-sans bg-background text-text antialiased">
-        <GuestTokenInit />
-        <Header />
-        <div className="min-h-screen">{children}</div>
-        <Footer />
-        <FloatingWhatsapp url={settings.whatsapp_social_url} />
+        {children}
       </body>
     </html>
   );

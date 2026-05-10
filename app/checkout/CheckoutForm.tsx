@@ -69,6 +69,11 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
   const [pointsDiscount, setPointsDiscount] = useState(0);
   const [couponInput, setCouponInput] = useState(storedCoupon ?? "");
   const [couponDiscount, setCouponDiscount] = useState(storedCouponDiscount);
+  // Tracks the subtotal at the moment the coupon was validated.
+  // If the subtotal drifts from this value, we clear the coupon so totals stay honest.
+  const [couponAppliedAtSubtotal, setCouponAppliedAtSubtotal] = useState<number | null>(
+    storedCouponDiscount > 0 ? subtotal : null
+  );
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponApplying, setCouponApplying] = useState(false);
   const [autofilled, setAutofilled] = useState(false);
@@ -92,6 +97,7 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [priceWarning, setPriceWarning] = useState<string | null>(null);
 
+  const isOrderingOpen = settings.is_ordering_open !== "false";
   const total = Math.max(0, subtotal + orderConfig.deliveryFee - pointsDiscount - couponDiscount);
 
   const {
@@ -100,6 +106,18 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
     formState: { errors },
     setValue,
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+
+  // Clear coupon when subtotal changes (e.g. user went back and removed items)
+  useEffect(() => {
+    if (couponAppliedAtSubtotal !== null && couponAppliedAtSubtotal !== subtotal) {
+      setCouponDiscount(0);
+      setCoupon(null, 0);
+      setCouponAppliedAtSubtotal(null);
+      setCouponError("تغيّر إجمالي الطلب، يرجى إعادة تطبيق كود الخصم");
+    }
+  // subtotal is the only dep we need — other setters are stable refs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal]);
 
   // Read order config from sessionStorage (set by cart page)
   useEffect(() => {
@@ -273,6 +291,18 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
     );
   }
 
+  if (!isOrderingOpen) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
+        <div className="text-5xl">🕐</div>
+        <h2 className="text-xl font-bold text-text">المطعم مغلق حالياً</h2>
+        <p className="text-sm text-gray-500 max-w-xs">
+          الطلبات متوقفة مؤقتاً، نعود قريباً. شكراً لتفهمك!
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-lg mx-auto px-4 pt-4 pb-32">
       <h1 className="text-xl font-bold text-text mb-4">إتمام الطلب</h1>
@@ -395,9 +425,11 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
                     setCouponError(body.error ?? "كود غير صحيح");
                     setCouponDiscount(0);
                     setCoupon(null, 0);
+                    setCouponAppliedAtSubtotal(null);
                   } else {
                     setCouponDiscount(body.discount ?? 0);
                     setCoupon(code, body.discount ?? 0);
+                    setCouponAppliedAtSubtotal(subtotal);
                   }
                 } catch {
                   setCouponError("حدث خطأ، حاول مرة أخرى");
@@ -416,7 +448,7 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
               <span>✅ خصم {couponDiscount} ج مُطبَّق</span>
               <button
                 type="button"
-                onClick={() => { setCouponInput(""); setCouponDiscount(0); setCoupon(null, 0); }}
+                onClick={() => { setCouponInput(""); setCouponDiscount(0); setCoupon(null, 0); setCouponAppliedAtSubtotal(null); }}
                 className="mr-auto text-red-500 text-xs"
               >
                 إلغاء
@@ -430,7 +462,7 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
           <PointsSlider
             balance={userProfile.points_balance}
             pointValue={pointValue}
-            subtotal={subtotal}
+            subtotal={Math.max(0, subtotal - couponDiscount)}
             maxPct={maxPct}
             discount={pointsDiscount}
             onChange={setPointsDiscount}
@@ -454,6 +486,7 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 px-4 py-3">
         <button
+          type="button"
           onClick={handleSubmit(onSubmit)}
           disabled={saving}
           className="flex items-center justify-between w-full max-w-lg mx-auto min-h-[52px] px-5 rounded-xl bg-accent text-white font-bold text-base disabled:opacity-60"

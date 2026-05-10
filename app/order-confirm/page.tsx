@@ -8,22 +8,40 @@ function OrderConfirmContent() {
   const router = useRouter();
   const orderId = searchParams.get("orderId");
 
+  async function markWhatsappOpened() {
+    if (!orderId) return;
+
+    const guestToken =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("guest_token")
+        : null;
+
+    const headers: Record<string, string> = {};
+    if (guestToken) headers["x-guest-token"] = guestToken;
+
+    await fetch(`/api/orders/${orderId}/whatsapp-opened`, {
+      method: "PATCH",
+      headers,
+    }).catch(() => {});
+  }
+
   async function handleConfirm() {
-    if (orderId) {
-      // Mark whatsapp_opened = true
-      await fetch(`/api/orders/${orderId}/whatsapp-opened`, {
-        method: "PATCH",
-      }).catch(() => {});
-    }
+    await markWhatsappOpened();
     router.push("/");
   }
 
   async function handleReopen() {
-    // Re-open WhatsApp — order data stored in sessionStorage by checkout
-    const raw = sessionStorage.getItem("khaldoun-last-wa-url");
-    if (raw) {
-      window.open(raw, "_blank", "noopener,noreferrer");
+    const raw =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("khaldoun-last-wa-url")
+        : null;
+
+    if (!raw) {
+      alert("رابط الواتساب غير متوفر، يرجى العودة وإعادة إرسال الطلب.");
+      return;
     }
+
+    window.open(raw, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -40,6 +58,7 @@ function OrderConfirmContent() {
 
       <div className="flex flex-col gap-3 w-full max-w-xs">
         <button
+          type="button"
           onClick={handleConfirm}
           className="w-full min-h-[52px] rounded-xl bg-primary text-white font-bold text-base"
         >
@@ -47,6 +66,7 @@ function OrderConfirmContent() {
         </button>
 
         <button
+          type="button"
           onClick={handleReopen}
           className="w-full min-h-[52px] rounded-xl border-2 border-[#25D366] text-[#25D366] font-bold text-base"
         >

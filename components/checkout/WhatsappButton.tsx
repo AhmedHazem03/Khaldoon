@@ -22,7 +22,6 @@ export default function WhatsappButton({
   const router = useRouter();
 
   async function handleClick() {
-    // Notify server that WA was opened
     if (onBeforeOpen) {
       await onBeforeOpen();
     }
@@ -34,17 +33,18 @@ export default function WhatsappButton({
       order.order_code
     );
 
-    // Persist URL so order-confirm page can reopen WhatsApp if needed
+    // Persist URL and guest token so order-confirm page can reopen WhatsApp
     sessionStorage.setItem("khaldoun-last-wa-url", url);
+    // Store orderId so the confirm page can send the authenticated PATCH
+    sessionStorage.setItem("khaldoun-pending-order-id", orderId);
 
     window.open(url, "_blank", "noopener,noreferrer");
-
-    // Navigate to confirmation page
     router.push(`/order-confirm?orderId=${orderId}`);
   }
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       className="flex items-center justify-center gap-3 w-full min-h-[52px] rounded-xl bg-[#25D366] text-white font-bold text-base shadow-md hover:bg-[#20b858] transition-colors"
     >

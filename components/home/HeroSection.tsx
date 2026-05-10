@@ -48,12 +48,6 @@ export default function HeroSection({
       <div className="absolute bottom-[-40px] left-[-40px] w-[260px] h-[260px] bg-[#0f293e]/10 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[60px] pointer-events-none" />
 
-      {/* ── Floating food emojis ── */}
-      <div className="absolute top-[10%] right-[7%] text-5xl animate-float opacity-[0.18] select-none pointer-events-none" aria-hidden>🥙</div>
-      <div className="absolute top-[38%] left-[5%] text-4xl animate-float-slow opacity-[0.12] select-none pointer-events-none" aria-hidden>🍗</div>
-      <div className="absolute bottom-[22%] right-[12%] text-6xl animate-float-alt opacity-[0.10] select-none pointer-events-none" aria-hidden>🍖</div>
-      <div className="absolute top-[65%] left-[12%] text-3xl animate-float opacity-[0.08] select-none pointer-events-none" aria-hidden>🌿</div>
-
       {/* ── Main content ── */}
       <div
         className={`relative z-10 flex flex-col items-center text-center px-6 pt-16 pb-32 w-full max-w-md mx-auto
@@ -72,16 +66,11 @@ export default function HeroSection({
 
         {/* Headline */}
         <h1
-          className={`text-[3.5rem] font-black text-white leading-[1.08] mb-3 tracking-tight
+          className={`text-[3.5rem] font-black text-white leading-[1.08] mb-3 tracking-tight whitespace-nowrap
             transition-all duration-700 delay-200
             ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
         >
-          أصل{" "}
-          <span className="relative text-[#0f293e] inline-block">
-            السوري
-           <span className="relative text-white border-b-[3px] border-[#0f293e] inline-block pb-0.5"/>
-          </span>
-          {" "}هون
+          أصل{" "}<span className="relative text-[#0f293e] inline-block">السوري<span className="relative text-white border-b-[3px] border-[#0f293e] inline-block pb-0.5" /></span>{" "}هون
         </h1>
 
         {/* Sub-headline */}

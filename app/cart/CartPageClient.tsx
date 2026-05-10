@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ShoppingBag } from "lucide-react";
 import CartItemRow from "@/components/cart/CartItem";
 import { useCartStore } from "@/stores/cart";
@@ -18,6 +19,7 @@ export default function CartPageClient({
   deliveryEnabled,
   pickupEnabled,
 }: CartPageClientProps) {
+  const router = useRouter();
   const items = useCartStore((s) => s.items);
   const subtotal = useCartStore((s) => s.subtotal());
 
@@ -117,6 +119,18 @@ export default function CartPageClient({
         </div>
       )}
 
+      {/* No active zones warning */}
+      {orderType === "delivery" && activeZones.length === 0 && (
+        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-4 text-center">
+          <p className="text-sm font-semibold text-orange-700">التوصيل غير متاح مؤقتاً</p>
+          {pickupEnabled && (
+            <p className="text-xs text-orange-600 mt-1">
+              يمكنك الاستلام من الفرع أو المحاولة لاحقاً
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Summary */}
       <div className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
         <div className="flex justify-between text-sm">
@@ -142,18 +156,15 @@ export default function CartPageClient({
 
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 px-4 py-3">
-        <Link
-          href="/checkout"
-          className={`flex items-center justify-between w-full max-w-lg mx-auto min-h-[52px] px-5 rounded-xl font-bold text-base ${
-            orderType === "delivery" && !selectedZoneId
-              ? "bg-gray-200 text-gray-400 pointer-events-none"
-              : "bg-accent text-white"
-          }`}
-          aria-disabled={orderType === "delivery" && !selectedZoneId}
+        <button
+          type="button"
+          disabled={orderType === "delivery" && !selectedZoneId}
+          onClick={() => router.push("/checkout")}
+          className="flex items-center justify-between w-full max-w-lg mx-auto min-h-[52px] px-5 rounded-xl font-bold text-base bg-accent text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
         >
           <span>إتمام الطلب</span>
           <span>{total} ج</span>
-        </Link>
+        </button>
       </div>
     </div>
   );

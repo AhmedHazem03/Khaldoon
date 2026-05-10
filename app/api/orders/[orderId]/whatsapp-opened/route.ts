@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerClient, createSessionClient } from "@/lib/supabase-server";
 
 /**
  * PATCH /api/orders/[orderId]/whatsapp-opened
  *
  * Marks whatsapp_opened = true for the given order.
- * Called from the order-confirm page after the user taps "Yes, I sent it".
- * No auth required — guest orders are identified by orderId only.
+ * Verifies ownership via either:
+ *   - Active user session (registered orders)
+ *   - x-guest-token header matching orders.guest_token (guest orders)
  */
 export async function PATCH(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   const { orderId } = await params;
 
-  // Validate orderId is a UUID
   const uuidPattern =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidPattern.test(orderId)) {
@@ -23,18 +23,62 @@ export async function PATCH(
 
   const supabase = await createServerClient();
 
-  const { error } = await supabase
-    .from("orders")
-    .update({ whatsapp_opened: true })
-    .eq("id", orderId);
+  // Try session-based auth first (registered users)
+  try {
+    const sessionClient = await createSessionClient();
+    const { data: { user: authUser } } = await sessionClient.auth.getUser();
 
-  if (error) {
-    console.error("whatsapp-opened update error:", error);
-    return NextResponse.json(
-      { error: "فشل في تحديث حالة الطلب" },
-      { status: 500 }
-    );
+    if (authUser) {
+      const { data: publicUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", authUser.id)
+        .single();
+
+      // User session is valid but no public record yet — treat as unauthorized,
+      // not a fallthrough to guest path (that would allow token-less access).
+      if (!publicUser) {
+        return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+      }
+
+      const { data: updated } = await supabase
+        .from("orders")
+        .update({ whatsapp_opened: true })
+        .eq("id", orderId)
+        .eq("user_id", publicUser.id)
+        .select("id");
+
+      if (!updated?.length) {
+        return NextResponse.json({ error: "الطلب غير موجود" }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+  } catch {
+    // session read failed — fall through to guest path
   }
 
-  return NextResponse.json({ success: true }, { status: 200 });
+  // Guest path: verify via x-guest-token header
+  const guestToken = request.headers.get("x-guest-token");
+  if (guestToken) {
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update({ whatsapp_opened: true })
+      .eq("id", orderId)
+      .eq("guest_token", guestToken)
+      .select("id");
+
+    if (error) {
+      console.error("whatsapp-opened guest update error:", error);
+      return NextResponse.json({ error: "فشل في تحديث حالة الطلب" }, { status: 500 });
+    }
+
+    if (!updated?.length) {
+      return NextResponse.json({ error: "الطلب غير موجود" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  }
+
+  return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 }

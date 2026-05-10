@@ -45,7 +45,7 @@ CREATE TABLE product_variants (
 CREATE TABLE users (
   id               uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
   auth_id          uuid    UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  phone_number     text    UNIQUE NOT NULL,
+  phone_number     text,
   name             text,
   default_address  text,
   points_balance   integer DEFAULT 0,
@@ -184,7 +184,7 @@ CREATE INDEX idx_orders_customer_phone   ON orders(customer_phone);
 CREATE INDEX idx_orders_created_at       ON orders(created_at DESC);
 CREATE INDEX idx_orders_status           ON orders(status);
 CREATE INDEX idx_orders_order_code       ON orders(order_code);
-CREATE INDEX idx_users_phone_number      ON users(phone_number);
+CREATE UNIQUE INDEX idx_users_phone_number ON users(phone_number) WHERE phone_number IS NOT NULL AND phone_number <> '';
 CREATE INDEX idx_order_items_order_id    ON order_items(order_id);
 CREATE INDEX idx_point_tx_user_id        ON point_transactions(user_id);
 CREATE INDEX idx_orders_created_status   ON orders(created_at DESC, status);
@@ -220,8 +220,12 @@ BEGIN
   INSERT INTO public.users (auth_id, phone_number, name)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'phone_number', ''),
-    COALESCE(NEW.raw_user_meta_data->>'name', '')
+    NULLIF(COALESCE(NEW.raw_user_meta_data->>'phone_number', ''), ''),
+    COALESCE(
+      NEW.raw_user_meta_data->>'full_name',
+      NEW.raw_user_meta_data->>'name',
+      ''
+    )
   );
   RETURN NEW;
 END;
@@ -250,19 +254,8 @@ CREATE TRIGGER set_order_code
 CREATE OR REPLACE FUNCTION handle_order_status_change()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-  -- On confirmed: award earned points to user balance
-  IF OLD.status != 'confirmed' AND NEW.status = 'confirmed'
-     AND NEW.points_earned > 0 AND NEW.user_id IS NOT NULL THEN
-    UPDATE users
-      SET points_balance = points_balance + NEW.points_earned
-      WHERE id = NEW.user_id;
-    INSERT INTO point_transactions (user_id, order_id, transaction_type, points)
-      VALUES (NEW.user_id, NEW.id, 'earned', NEW.points_earned);
-    NEW.points_status := 'confirmed';
-  END IF;
-
-  -- On cancellation of a previously confirmed order: reverse earned points
-  IF OLD.status = 'confirmed' AND NEW.status = 'cancelled'
+  -- On any cancellation: reverse earned points (awarded immediately at order creation)
+  IF NEW.status = 'cancelled' AND OLD.status != 'cancelled'
      AND OLD.points_earned > 0 AND OLD.user_id IS NOT NULL THEN
     UPDATE users
       SET points_balance = GREATEST(0, points_balance - OLD.points_earned)
@@ -273,7 +266,7 @@ BEGIN
     NEW.points_status := 'cancelled';
   END IF;
 
-  -- On any cancellation: refund points_used
+  -- On any cancellation: refund points_used (redeemed discount)
   IF NEW.status = 'cancelled' AND OLD.status != 'cancelled'
      AND OLD.points_used > 0 AND OLD.user_id IS NOT NULL THEN
     UPDATE users
@@ -337,7 +330,7 @@ BEGIN
     user_id, customer_name, customer_phone, delivery_address,
     order_type, zone_id, notes,
     subtotal, delivery_fee, discount_amount, offer_discount, total_price,
-    points_used, points_earned, coupon_id
+    points_used, points_earned, coupon_id, points_status
   ) VALUES (
     p_user_id,
     p_order_data->>'customer_name',
@@ -348,7 +341,7 @@ BEGIN
     p_order_data->>'notes',
     p_subtotal, p_delivery_fee, p_discount, p_offer_discount, p_total,
     p_points_to_use, v_points_earned,
-    p_coupon_id
+    p_coupon_id, 'confirmed'
   ) RETURNING id INTO v_order_id;
 
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
@@ -375,9 +368,13 @@ BEGIN
     VALUES (p_user_id, v_order_id, 'redeemed', p_points_to_use);
   END IF;
 
-  -- NOTE: 'earned' points are NOT inserted here.
-  -- The handle_order_status_change trigger inserts the 'earned' record
-  -- when order status changes to 'confirmed'. Inserting here would cause duplicates.
+  -- Award earned points immediately — no admin confirmation required
+  IF v_points_earned > 0 THEN
+    UPDATE users SET points_balance = points_balance + v_points_earned
+    WHERE id = p_user_id;
+    INSERT INTO point_transactions (user_id, order_id, transaction_type, points)
+    VALUES (p_user_id, v_order_id, 'earned', v_points_earned);
+  END IF;
 
   RETURN v_order_id;
 END;

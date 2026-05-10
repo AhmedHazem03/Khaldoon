@@ -2,7 +2,7 @@
 
 import { revalidateTag } from "next/cache";
 import { revalidatePath } from "next/cache";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerClient, requireAdmin } from "@/lib/supabase-server";
 
 const SETTINGS_KEYS = [
   "whatsapp_order_number",
@@ -16,16 +16,23 @@ const SETTINGS_KEYS = [
   "restaurant_address",
   "delivery_enabled",
   "pickup_enabled",
+  "is_ordering_open",
+  "working_hours",
   "points_per_100_egp",
   "point_value_egp",
   "max_points_discount_pct",
   "stat_customers",
   "stat_years",
-  "working_hours",
-  "is_ordering_open",
+  "stat_followers",
+  "stat_delivery_time",
+  "stat_rating",
+  "established_year",
+  "brand_story",
+  "hero_video_url",
 ] as const;
 
 export async function saveSettings(formData: FormData) {
+  await requireAdmin();
   const supabase = await createServerClient();
 
   const upserts = SETTINGS_KEYS.map((key) => ({
@@ -42,7 +49,7 @@ export async function saveSettings(formData: FormData) {
   }
 
   // Invalidate the cross-request settings cache so all pages pick up new values
-  revalidateTag("settings", "default");
+  revalidateTag("settings");
   revalidatePath("/admin/settings");
   revalidatePath("/");
 }

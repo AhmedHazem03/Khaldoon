@@ -54,7 +54,7 @@ export default function OrderSummary({
 
       {pointsEarned !== undefined && pointsEarned > 0 && (
         <p className="text-xs text-gray-500 pt-1">
-          ⭐ ستحصل على {pointsEarned} نقطة بعد تأكيد الطلب
+          ⭐ ستحصل على {pointsEarned} نقطة فور إتمام الطلب
         </p>
       )}
     </div>

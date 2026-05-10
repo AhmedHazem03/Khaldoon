@@ -29,6 +29,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Reject orders when restaurant has closed ordering
+    const earlySettings = await getSettings();
+    if (earlySettings.is_ordering_open === "false") {
+      return NextResponse.json(
+        { error: "الطلبات مغلقة حالياً، شكراً لتفهمك" },
+        { status: 503 }
+      );
+    }
+
     const {
       customer_name,
       customer_phone,
@@ -287,7 +296,23 @@ export async function POST(request: NextRequest) {
       deliveryFee = zone.fee;
     }
 
-    // â”€â”€ Registered user path â€” use create_order_with_points RPC â”€â”€
+    // ── Reserve coupon slot atomically BEFORE creating the order ──────────
+    // The updated increment_coupon_uses RPC does a check-and-increment in one
+    // statement, eliminating the TOCTOU window between validation and commit.
+    // If order creation later fails we lose one slot — acceptable vs over-use.
+    if (couponId) {
+      const { data: slotReserved } = await supabase.rpc("increment_coupon_uses", {
+        p_coupon_id: couponId,
+      });
+      if (!slotReserved) {
+        return NextResponse.json(
+          { error: "تم استخدام هذا الكوبون بالكامل" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // ── Registered user path — use create_order_with_points RPC ──────────
     if (is_registered) {
       const sessionClient = await createSessionClient();
       const { data: { user: authUser } } = await sessionClient.auth.getUser();
@@ -351,11 +376,6 @@ export async function POST(request: NextRequest) {
         .eq("id", orderId as string)
         .single();
 
-      // Increment coupon uses_count atomically via RPC (avoids read-modify-write race)
-      if (couponId) {
-        await supabase.rpc("increment_coupon_uses", { p_coupon_id: couponId });
-      }
-
       return NextResponse.json(
         {
           id: order?.id ?? orderId,
@@ -414,11 +434,6 @@ export async function POST(request: NextRequest) {
         { error: "فشل في حفظ عناصر الطلب" },
         { status: 500 }
       );
-    }
-
-    // Increment coupon uses_count atomically via RPC (avoids read-modify-write race)
-    if (couponId) {
-      await supabase.rpc("increment_coupon_uses", { p_coupon_id: couponId });
     }
 
     return NextResponse.json(

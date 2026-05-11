@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateProfile } from "@/app/profile/actions";
+import { updateProfile } from "@/app/(customer)/(with-footer)/profile/actions";
 
 interface Props {
   name: string | null;

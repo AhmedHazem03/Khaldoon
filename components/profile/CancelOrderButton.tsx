@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { cancelOrder } from "@/app/profile/actions";
+import { cancelOrder } from "@/app/(customer)/(with-footer)/profile/actions";
 
 const ERROR_MESSAGES: Record<string, string> = {
   window_expired: "انتهت مدة الإلغاء (5 دقائق من الطلب)",

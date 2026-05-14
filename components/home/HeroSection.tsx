@@ -3,6 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Cairo } from "next/font/google";
+
+const cairo = Cairo({ subsets: ["arabic"] });
 
 interface HeroSectionProps {
   isOrderingOpen: boolean;
@@ -82,7 +85,7 @@ export default function HeroSection({
 
         {/* Headline */}
         <h1
-          className={`text-[2.8rem] font-black text-white leading-[1.08] mb-3 tracking-tight whitespace-nowrap
+          className={`${cairo.className} text-[2.3rem] font-black text-white leading-[1.08] mb-3 tracking-tight whitespace-nowrap
             transition-all duration-700 delay-200
             ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
         >

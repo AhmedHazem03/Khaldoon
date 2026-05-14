@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { getImageUrl } from "@/lib/images";
 
 interface CategoryTabsProps {
-  categories: Array<{ id: string; name: string; icon: string | null }>;
+  categories: Array<{ id: string; name: string; icon: string | null; image_url: string | null }>;
   activeId: string;
   onSelect: (id: string) => void;
 }
@@ -41,7 +42,17 @@ export default function CategoryTabs({
                     : "bg-white text-text border-gray-200 hover:border-accent hover:text-accent"
                 }`}
             >
-              {cat.icon && <span aria-hidden="true">{cat.icon}</span>}
+              {cat.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={getImageUrl(cat.image_url, 48, 48) ?? ""}
+                  alt=""
+                  aria-hidden="true"
+                  className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                />
+              ) : cat.icon ? (
+                <span aria-hidden="true">{cat.icon}</span>
+              ) : null}
               {cat.name}
             </button>
           );

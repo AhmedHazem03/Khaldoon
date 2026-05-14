@@ -13,6 +13,9 @@ import { MenuSearch } from "./MenuSearch";
 import { ImageUpload } from "./ImageUpload";
 import { CategoryImageUpload } from "./CategoryImageUpload";
 import { AddProductForm } from "./AddProductForm";
+import { DeleteConfirmButton } from "./DeleteConfirmButton";
+import { SubmitButton } from "./SubmitButton";
+import { CategoryIconPicker } from "./CategoryIconPicker";
 
 export const metadata = { title: "إدارة المنيو — مطعم خلدون" };
 
@@ -113,12 +116,7 @@ export default async function AdminMenuPage({
             required
             className="flex-1 min-w-[140px] rounded-lg border border-gray-200 px-3 py-2 text-sm"
           />
-          <input
-            type="text"
-            name="icon"
-            placeholder="أيقونة (emoji)"
-            className="w-20 rounded-lg border border-gray-200 px-3 py-2 text-sm text-center"
-          />
+          <CategoryIconPicker />
           <input
             type="number"
             name="order_index"
@@ -126,12 +124,12 @@ export default async function AdminMenuPage({
             defaultValue="0"
             className="w-20 rounded-lg border border-gray-200 px-3 py-2 text-sm"
           />
-          <button
-            type="submit"
+          <SubmitButton
             className="min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-sm font-medium"
+            pendingChildren="جاري..."
           >
             إضافة
-          </button>
+          </SubmitButton>
         </form>
       </section>
 
@@ -184,12 +182,12 @@ export default async function AdminMenuPage({
                   name="is_visible"
                   value={cat.is_visible ? "false" : "true"}
                 />
-                <button
-                  type="submit"
+                <SubmitButton
                   className="text-xs px-2.5 py-1.5 rounded border border-gray-200 text-gray-500 hover:bg-gray-100 min-h-[32px]"
+                  pendingChildren="..."
                 >
                   {cat.is_visible ? "إخفاء" : "إظهار"}
-                </button>
+                </SubmitButton>
               </form>
               <form
                 action={async () => {
@@ -197,12 +195,12 @@ export default async function AdminMenuPage({
                   await deleteCategory(cat.id);
                 }}
               >
-                <button
-                  type="submit"
+                <DeleteConfirmButton
+                  message={`هل أنت متأكد من حذف قسم "${cat.name}"؟ سيتم حذف جميع منتجاته.`}
                   className="text-xs px-2.5 py-1.5 rounded border border-red-200 text-red-600 hover:bg-red-50 min-h-[32px]"
                 >
                   حذف
-                </button>
+                </DeleteConfirmButton>
               </form>
             </div>
           </div>
@@ -225,13 +223,7 @@ export default async function AdminMenuPage({
                 required
                 className="flex-1 min-w-[140px] rounded-lg border border-gray-200 px-3 py-2 text-sm"
               />
-              <input
-                type="text"
-                name="icon"
-                defaultValue={cat.icon ?? ""}
-                placeholder="أيقونة"
-                className="w-20 rounded-lg border border-gray-200 px-3 py-2 text-sm text-center"
-              />
+              <CategoryIconPicker defaultValue={cat.icon ?? ""} />
               <input
                 type="number"
                 name="order_index"
@@ -247,12 +239,12 @@ export default async function AdminMenuPage({
                 <option value="true">ظاهر</option>
                 <option value="false">مخفي</option>
               </select>
-              <button
-                type="submit"
+              <SubmitButton
                 className="min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-sm font-medium"
+                pendingChildren="جاري الحفظ..."
               >
                 حفظ التعديل
-              </button>
+              </SubmitButton>
             </form>
           </details>
 
@@ -353,16 +345,16 @@ function ProductRow({
                   value={product.is_available ? "false" : "true"}
                 />
                 <input type="hidden" name="order_index" value={product.order_index} />
-                <button
-                  type="submit"
+                <SubmitButton
                   className={`text-xs px-2 py-1.5 rounded border min-h-[32px] ${
                     product.is_available
                       ? "border-green-200 text-green-700 hover:bg-green-50"
                       : "border-gray-200 text-gray-500 hover:bg-gray-100"
                   }`}
+                  pendingChildren="..."
                 >
                   {product.is_available ? "إيقاف" : "تفعيل"}
-                </button>
+                </SubmitButton>
               </form>
               <form
                 action={async () => {
@@ -370,12 +362,12 @@ function ProductRow({
                   await deleteProduct(product.id);
                 }}
               >
-                <button
-                  type="submit"
+                <DeleteConfirmButton
+                  message={`هل أنت متأكد من حذف منتج "${product.name}"؟`}
                   className="text-xs px-2 py-1.5 rounded border border-red-200 text-red-600 hover:bg-red-50 min-h-[32px]"
                 >
                   حذف
-                </button>
+                </DeleteConfirmButton>
               </form>
             </div>
           </div>
@@ -448,12 +440,12 @@ function ProductRow({
               placeholder="الترتيب"
               className="w-20 rounded-lg border border-gray-200 px-2 py-2 text-sm"
             />
-            <button
-              type="submit"
+            <SubmitButton
               className="min-h-[44px] px-4 rounded-lg bg-[#0F293E] text-white text-sm font-medium"
+              pendingChildren="جاري الحفظ..."
             >
               حفظ
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </details>
@@ -487,6 +479,7 @@ function ProductRow({
               name="price"
               placeholder="السعر *"
               required
+              min="0"
               className="w-24 rounded border border-gray-200 px-2 py-1.5 text-xs"
             />
             <input
@@ -496,12 +489,12 @@ function ProductRow({
               placeholder="الترتيب"
               className="w-20 rounded border border-gray-200 px-2 py-1.5 text-xs"
             />
-            <button
-              type="submit"
+            <SubmitButton
               className="px-3 py-1.5 rounded bg-[#0F293E] text-white text-xs min-h-[32px]"
+              pendingChildren="جاري..."
             >
               إضافة
-            </button>
+            </SubmitButton>
           </form>
         </details>
       </div>
@@ -542,12 +535,12 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
               value={variant.is_available ? "false" : "true"}
             />
             <input type="hidden" name="order_index" value={variant.order_index} />
-            <button
-              type="submit"
+            <SubmitButton
               className="text-xs px-1.5 py-1 rounded border border-gray-200 text-gray-500 hover:bg-gray-100 min-h-[28px]"
+              pendingChildren="..."
             >
               {variant.is_available ? "إيقاف" : "تفعيل"}
-            </button>
+            </SubmitButton>
           </form>
           <form
             action={async () => {
@@ -555,12 +548,12 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
               await deleteVariant(variant.id);
             }}
           >
-            <button
-              type="submit"
+            <DeleteConfirmButton
+              message={`هل أنت متأكد من حذف متغير "${variant.variant_name}"؟`}
               className="text-xs px-1.5 py-1 rounded border border-red-200 text-red-500 hover:bg-red-50 min-h-[28px]"
             >
               حذف
-            </button>
+            </DeleteConfirmButton>
           </form>
         </div>
       </div>
@@ -587,6 +580,7 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
             defaultValue={variant.price}
             placeholder="السعر *"
             required
+            min="0"
             className="w-24 rounded border border-gray-200 px-2 py-1.5 text-xs"
           />
           <input
@@ -604,12 +598,12 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
             <option value="true">متاح</option>
             <option value="false">موقف</option>
           </select>
-          <button
-            type="submit"
+          <SubmitButton
             className="px-3 py-1.5 rounded bg-[#0F293E] text-white text-xs min-h-[32px]"
+            pendingChildren="جاري الحفظ..."
           >
             حفظ
-          </button>
+          </SubmitButton>
         </form>
       </details>
     </div>

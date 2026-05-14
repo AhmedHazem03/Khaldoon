@@ -2,19 +2,26 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { Category } from "@/types/app";
+import type { Category, Product } from "@/types/app";
+import ProductCard from "@/components/menu/ProductCard";
 
 interface MenuShowcaseProps {
   categories: Category[];
+  products?: Product[];
+  whatsappUrl?: string;
 }
 
-export default function MenuShowcase({ categories }: MenuShowcaseProps) {
+export default function MenuShowcase({ categories, products = [], whatsappUrl = "" }: MenuShowcaseProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const filtered =
     activeId === null
       ? categories
       : categories.filter((c) => c.id === activeId);
+
+  const activeProducts = activeId
+    ? products.filter((p) => p.category_id === activeId)
+    : [];
 
   if (!categories.length) return null;
 
@@ -89,9 +96,11 @@ export default function MenuShowcase({ categories }: MenuShowcaseProps) {
             </span>
           )}
           <div className="relative z-10 flex-1">
-            <span className="inline-flex items-center gap-1 text-gold text-xs font-bold mb-1">
-              <span>⭐</span> الأكثر طلباً
-            </span>
+            {activeId === null && (
+              <span className="inline-flex items-center gap-1 text-gold text-xs font-bold mb-1">
+                <span>⭐</span> الأكثر طلباً
+              </span>
+            )}
             <p className="text-white font-black text-xl leading-tight">{filtered[0].name}</p>
             <p className="text-white/45 text-xs mt-1">اضغط لتصفح الأصناف ←</p>
           </div>
@@ -100,8 +109,25 @@ export default function MenuShowcase({ categories }: MenuShowcaseProps) {
         </Link>
       )}
 
-      {/* Rest — 3-column grid */}
-      {filtered.length > 1 && (
+      {/* Products grid — shown when a category is selected */}
+      {activeId !== null && (
+        activeProducts.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 mb-1">
+            {activeProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                whatsappUrl={whatsappUrl}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-text/40 text-sm py-6">لا توجد منتجات في هذا القسم</p>
+        )
+      )}
+
+      {/* Rest — 3-column grid (shown only when no filter active) */}
+      {activeId === null && filtered.length > 1 && (
         <div className="grid grid-cols-3 gap-2.5">
           {filtered.slice(1).map((cat, idx) => (
             <Link
@@ -122,7 +148,7 @@ export default function MenuShowcase({ categories }: MenuShowcaseProps) {
               {/* Hover tint */}
               <div className="absolute inset-0 bg-accent/0 group-hover:bg-accent/[0.04] transition-colors rounded-2xl" />
               {cat.icon && (
-                <div className="relative z-10 w-[52px] h-[52px] rounded-xl bg-accent/8 flex items-center justify-center group-hover:bg-accent/15 transition-colors">
+                <div className="relative z-10 w-[52px] h-[52px] rounded-xl bg-accent/[0.08] flex items-center justify-center group-hover:bg-accent/15 transition-colors">
                   <span
                     className="text-[1.9rem] group-hover:scale-110 transition-transform duration-200"
                     aria-hidden

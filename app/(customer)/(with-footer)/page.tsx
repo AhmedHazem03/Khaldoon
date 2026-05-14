@@ -6,7 +6,7 @@ import MenuShowcase from "@/components/home/MenuShowcase";
 import LoyaltySection from "@/components/home/LoyaltySection";
 import BrandStory from "@/components/home/BrandStory";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
-import type { Offer, Category } from "@/types/app";
+import type { Offer, Category, Product } from "@/types/app";
 
 export const metadata = {
   title: "مطعم خلدون | أصل السوري هون",
@@ -29,18 +29,21 @@ export default async function HomePage() {
     createServerClient(),
   ]);
 
-  const [{ data: offersData }, { data: categoriesData }] = await Promise.all([
+  const [{ data: offersData }, { data: categoriesData }, { data: productsData }] = await Promise.all([
     supabase
       .from("offers")
       .select("*, offer_products(id, product_id, order_index, products(id, name, image_url))")
       .eq("is_active", true)
       .order("order_index"),
     supabase.from("categories").select("*").eq("is_visible", true).order("order_index"),
+    supabase.from("products").select("*, product_variants(*)").eq("is_available", true).order("order_index"),
   ]);
 
   const isOrderingOpen = settings.is_ordering_open !== "false";
   const activeOffers = (offersData as Offer[]) ?? [];
   const visibleCategories = (categoriesData as Category[]) ?? [];
+  const products = (productsData as Product[]) ?? [];
+  const whatsappUrl = `https://wa.me/${settings.whatsapp_order_number}`;
 
   // ── Build Social Proof stats from settings ──────────────────────────────
    
@@ -72,7 +75,7 @@ export default async function HomePage() {
         </section>
       )}
       {/* ══ 4. MENU SHOWCASE ═════════════════════════════════════════════════ */}
-      <MenuShowcase categories={visibleCategories} />
+      <MenuShowcase categories={visibleCategories} products={products} whatsappUrl={whatsappUrl} />
 
       {/* ══ 5. WAKSEB LOYALTY ════════════════════════════════════════════════ */}
       <LoyaltySection />

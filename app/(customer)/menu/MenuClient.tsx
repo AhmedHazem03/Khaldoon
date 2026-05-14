@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import CategoryTabs from "@/components/menu/CategoryTabs";
 import ProductCard from "@/components/menu/ProductCard";
+import { getImageUrl } from "@/lib/images";
 import type { Category, Product, ActiveProductOffer } from "@/types/app";
 
 interface MenuClientProps {
@@ -87,8 +88,17 @@ export default function MenuClient({
               }}
               className="pt-6"
             >
-              <h2 className="font-bold text-text text-base mb-3">
-                {cat.icon && <span className="ml-1">{cat.icon}</span>}
+              <h2 className="font-bold text-text text-base mb-3 flex items-center gap-2">
+                {cat.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={getImageUrl(cat.image_url, 80, 80) ?? ""}
+                    alt={cat.name}
+                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                  />
+                ) : cat.icon ? (
+                  <span aria-hidden="true">{cat.icon}</span>
+                ) : null}
                 {cat.name}
               </h2>
 

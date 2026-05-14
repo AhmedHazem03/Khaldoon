@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { addProductWithImage } from "./actions";
 
 type State = { error: string | null } | null;
@@ -23,10 +23,12 @@ export function AddProductForm({ categoryId, categoryName }: { categoryId: strin
     reader.readAsDataURL(file);
   }
 
-  // Reset form on success
-  if (state?.error === null && !isPending) {
-    // state.error === null means success — form will be replaced by revalidated page
-  }
+  useEffect(() => {
+    if (state?.error === null && !isPending) {
+      formRef.current?.reset();
+      setPreview(null);
+    }
+  }, [state, isPending]);
 
   return (
     <form ref={formRef} action={action} className="p-4 space-y-3">

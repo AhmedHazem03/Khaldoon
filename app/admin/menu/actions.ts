@@ -56,22 +56,44 @@ export async function upsertCategory(formData: FormData) {
   const supabase = await createServerClient();
   const id = formData.get("id") as string | null;
   const name = (formData.get("name") as string).trim();
-  const icon = (formData.get("icon") as string).trim();
+  const icon = (formData.get("icon") as string | null)?.trim() ?? "";
   const order_index = parseInt(formData.get("order_index") as string, 10) || 0;
   const is_visible = formData.get("is_visible") === "true";
+  const iconImageFile = formData.get("icon_image") as File | null;
 
   if (!name) return;
 
+  let categoryId = id;
+
   if (id) {
-    await supabase
+    const { error } = await supabase
       .from("categories")
       .update({ name, icon, order_index, is_visible })
       .eq("id", id);
+    if (error) throw new Error(`فشل تحديث القسم: ${error.message}`);
   } else {
-    await supabase
+    const { data, error } = await supabase
       .from("categories")
-      .insert({ name, icon, order_index, is_visible });
+      .insert({ name, icon, order_index, is_visible })
+      .select("id")
+      .single();
+    if (error || !data) throw new Error(`فشل إضافة القسم: ${error?.message ?? "فشل الحفظ"}`);
+    categoryId = data.id;
   }
+
+  // Upload custom icon image if provided
+  if (iconImageFile && iconImageFile.size > 0 && categoryId) {
+    const validationError = validateImageFile(iconImageFile);
+    if (!validationError) {
+      const imageUrl = await uploadToCloudinary(
+        iconImageFile,
+        `category-icon-${categoryId}`,
+        "khaldoun/categories"
+      );
+      await supabase.from("categories").update({ image_url: imageUrl }).eq("id", categoryId);
+    }
+  }
+
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
   revalidatePath("/");
@@ -80,7 +102,8 @@ export async function upsertCategory(formData: FormData) {
 export async function deleteCategory(categoryId: string) {
   await requireAdmin();
   const supabase = await createServerClient();
-  await supabase.from("categories").delete().eq("id", categoryId);
+  const { error } = await supabase.from("categories").delete().eq("id", categoryId);
+  if (error) throw new Error(`فشل حذف القسم: ${error.message}`);
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
   revalidatePath("/");
@@ -112,9 +135,11 @@ export async function upsertProduct(formData: FormData) {
   };
 
   if (id) {
-    await supabase.from("products").update(payload).eq("id", id);
+    const { error } = await supabase.from("products").update(payload).eq("id", id);
+    if (error) throw new Error(`فشل تحديث المنتج: ${error.message}`);
   } else {
-    await supabase.from("products").insert(payload);
+    const { error } = await supabase.from("products").insert(payload);
+    if (error) throw new Error(`فشل إضافة المنتج: ${error.message}`);
   }
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
@@ -123,7 +148,8 @@ export async function upsertProduct(formData: FormData) {
 export async function deleteProduct(productId: string) {
   await requireAdmin();
   const supabase = await createServerClient();
-  await supabase.from("products").delete().eq("id", productId);
+  const { error } = await supabase.from("products").delete().eq("id", productId);
+  if (error) throw new Error(`فشل حذف المنتج: ${error.message}`);
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
 }
@@ -141,14 +167,16 @@ export async function upsertVariant(formData: FormData) {
   if (!variant_name || !product_id || isNaN(price)) return;
 
   if (id) {
-    await supabase
+    const { error } = await supabase
       .from("product_variants")
       .update({ variant_name, price, is_available, order_index })
       .eq("id", id);
+    if (error) throw new Error(`فشل تحديث المتغير: ${error.message}`);
   } else {
-    await supabase
+    const { error } = await supabase
       .from("product_variants")
       .insert({ product_id, variant_name, price, is_available, order_index });
+    if (error) throw new Error(`فشل إضافة المتغير: ${error.message}`);
   }
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
@@ -157,7 +185,8 @@ export async function upsertVariant(formData: FormData) {
 export async function deleteVariant(variantId: string) {
   await requireAdmin();
   const supabase = await createServerClient();
-  await supabase.from("product_variants").delete().eq("id", variantId);
+  const { error } = await supabase.from("product_variants").delete().eq("id", variantId);
+  if (error) throw new Error(`فشل حذف المتغير: ${error.message}`);
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
 }

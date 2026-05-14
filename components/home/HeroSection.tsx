@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -50,10 +51,25 @@ export default function HeroSection({
 
       {/* ── Main content ── */}
       <div
-        className={`relative z-10 flex flex-col items-center text-center px-6 pt-16 pb-32 w-full max-w-md mx-auto
+        className={`relative z-10 flex flex-col items-center text-center px-6 pt-0 pb-32 -mt-12 w-full max-w-md mx-auto
           transition-all duration-700 ease-out
           ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
       >
+        {/* Logo */}
+        <div
+          className={`-mb-16 transition-all duration-700
+            ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+        >
+          <Image
+            src="/logos/logo khaldon-02.png"
+            alt="خلدون السوري"
+            width={250}
+            height={250}
+            className="object-contain w-[230px] h-[230px] sm:w-[270px] sm:h-[270px]"
+            priority
+          />
+        </div>
+
         {/* Trust badge */}
         <div
           className={`inline-flex items-center gap-2 glass-card rounded-full px-5 py-2 mb-6
@@ -66,7 +82,7 @@ export default function HeroSection({
 
         {/* Headline */}
         <h1
-          className={`text-[3.5rem] font-black text-white leading-[1.08] mb-3 tracking-tight whitespace-nowrap
+          className={`text-[2.8rem] font-black text-white leading-[1.08] mb-3 tracking-tight whitespace-nowrap
             transition-all duration-700 delay-200
             ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
         >

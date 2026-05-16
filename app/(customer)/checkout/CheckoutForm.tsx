@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useCartStore } from "@/stores/cart";
 import { calcPointsEarned } from "@/lib/points";
 import { generateWhatsAppMessage, buildWhatsAppURL } from "@/lib/whatsapp";
+import { getGuestToken } from "@/lib/guest-token";
 import OrderSummary from "@/components/checkout/OrderSummary";
 import PointsSlider from "@/components/checkout/PointsSlider";
 import type { Settings } from "@/types/app";
@@ -111,13 +112,27 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subtotal]);
 
-  // Read order config from sessionStorage (set by cart page)
+  // Read order config from sessionStorage (set by cart page).
+  // Values are recomputed server-side from zone_id during checkout, so this
+  // is only a UX hint — but we still validate the shape to avoid runtime
+  // crashes on tampered storage.
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("khaldoun-order-config");
-      if (raw) {
-        const config = JSON.parse(raw) as OrderConfig;
-        setOrderConfig(config);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<OrderConfig>;
+      if (
+        (parsed.orderType === "delivery" || parsed.orderType === "pickup") &&
+        typeof parsed.zoneId === "string" &&
+        typeof parsed.deliveryFee === "number" &&
+        Number.isFinite(parsed.deliveryFee) &&
+        parsed.deliveryFee >= 0
+      ) {
+        setOrderConfig({
+          orderType: parsed.orderType,
+          zoneId: parsed.zoneId,
+          deliveryFee: Math.floor(parsed.deliveryFee),
+        });
       }
     } catch {
       // ignore
@@ -201,7 +216,7 @@ export default function CheckoutForm({ settings, userProfile }: CheckoutFormProp
     // won't block it after the async fetch completes.
     const waWindow = window.open("", "_blank");
 
-    const guestToken = sessionStorage.getItem("guest_token") ?? undefined;
+    const guestToken = getGuestToken() ?? undefined;
 
     try {
       const res = await fetch("/api/orders", {

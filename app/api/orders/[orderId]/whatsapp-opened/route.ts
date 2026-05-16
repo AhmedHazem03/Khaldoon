@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, createSessionClient } from "@/lib/supabase-server";
+import { rateLimit } from "@/lib/rate-limit";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * PATCH /api/orders/[orderId]/whatsapp-opened
@@ -13,11 +16,16 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
+  const limited = await rateLimit({
+    request,
+    key: "wa-opened",
+    limit: 30,
+  });
+  if (limited) return limited;
+
   const { orderId } = await params;
 
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidPattern.test(orderId)) {
+  if (!UUID_RE.test(orderId)) {
     return NextResponse.json({ error: "معرّف الطلب غير صحيح" }, { status: 400 });
   }
 
@@ -35,8 +43,6 @@ export async function PATCH(
         .eq("auth_id", authUser.id)
         .single();
 
-      // User session is valid but no public record yet — treat as unauthorized,
-      // not a fallthrough to guest path (that would allow token-less access).
       if (!publicUser) {
         return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
       }
@@ -60,7 +66,7 @@ export async function PATCH(
 
   // Guest path: verify via x-guest-token header
   const guestToken = request.headers.get("x-guest-token");
-  if (guestToken) {
+  if (guestToken && UUID_RE.test(guestToken)) {
     const { data: updated, error } = await supabase
       .from("orders")
       .update({ whatsapp_opened: true })
@@ -69,7 +75,7 @@ export async function PATCH(
       .select("id");
 
     if (error) {
-      console.error("whatsapp-opened guest update error:", error);
+      console.error("[whatsapp-opened] guest update error:", error);
       return NextResponse.json({ error: "فشل في تحديث حالة الطلب" }, { status: 500 });
     }
 

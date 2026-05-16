@@ -16,9 +16,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
 
-  // Merge guest orders if guest_token cookie was stored before OAuth redirect
+  // Merge guest orders if guest_token cookie was stored before OAuth redirect.
+  // UUIDs contain no percent-encodable characters, so the cookie value is used
+  // verbatim — no decodeURIComponent needed.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const guestToken = request.cookies.get("guest_token")?.value;
-  if (guestToken) {
+  if (guestToken && UUID_RE.test(guestToken)) {
     try {
       const serverClient = await createServerClient();
       const { data: publicUser } = await serverClient
@@ -31,7 +34,7 @@ export async function GET(request: NextRequest) {
         await serverClient
           .from("orders")
           .update({ user_id: publicUser.id })
-          .eq("guest_token", decodeURIComponent(guestToken))
+          .eq("guest_token", guestToken)
           .is("user_id", null);
       }
     } catch {

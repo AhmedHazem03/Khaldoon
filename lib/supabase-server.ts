@@ -1,8 +1,23 @@
 import {
   createServerClient as createSupabaseServerClient,
 } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
+
+/**
+ * Anon-key, cookie-less client for reading PUBLIC tables from Server
+ * Components (homepage, /menu, etc.). Use this in preference to
+ * createServerClient() when no auth or mutations are needed — it keeps
+ * service-role usage scoped to writes and RLS-bypassing reads.
+ */
+export function createPublicClient() {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
 
 /**
  * Session-aware server client — uses anon key + cookies to read auth state.
@@ -72,8 +87,16 @@ export async function requireAdmin(): Promise<void> {
   const client = await createSessionClient();
   const {
     data: { user },
+    error,
   } = await client.auth.getUser();
   if (!user || user.app_metadata?.role !== "admin") {
+    // Logged so the real reason is visible in the Vercel function logs
+    // (the client only sees an opaque 500 + digest in production).
+    console.error("[requireAdmin] denied", {
+      hasUser: !!user,
+      role: user?.app_metadata?.role ?? null,
+      authError: error?.message ?? null,
+    });
     throw new Error("غير مصرح");
   }
 }

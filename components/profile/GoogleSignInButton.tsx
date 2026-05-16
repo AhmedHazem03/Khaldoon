@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
+import { getGuestToken } from "@/lib/guest-token";
 
 interface Props {
   className?: string;
@@ -14,12 +15,12 @@ export default function GoogleSignInButton({ className }: Props) {
     setLoading(true);
     const supabase = createBrowserClient();
 
-    if (typeof window !== "undefined") {
-      const guestToken = sessionStorage.getItem("guest_token");
-      if (guestToken) {
-        const isHttps = window.location.protocol === "https:";
-        document.cookie = `guest_token=${encodeURIComponent(guestToken)}; max-age=600; path=/; SameSite=Lax${isHttps ? "; Secure" : ""}`;
-      }
+    const guestToken = getGuestToken();
+    if (guestToken) {
+      // UUID — no percent-encoding needed. Mirrored as a cookie so the
+      // OAuth callback can merge guest orders after redirect.
+      const isHttps = window.location.protocol === "https:";
+      document.cookie = `guest_token=${guestToken}; max-age=600; path=/; SameSite=Lax${isHttps ? "; Secure" : ""}`;
     }
 
     await supabase.auth.signInWithOAuth({

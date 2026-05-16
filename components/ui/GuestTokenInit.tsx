@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
+import { ensureGuestToken } from "@/lib/guest-token";
 
 /**
- * Generates and persists a guest_token in sessionStorage on first visit.
- * This UUID is attached to all guest orders for secure guest-to-registered merge.
- * Merge uses session token ONLY — never by phone number match alone.
+ * Generates and persists a guest_token in localStorage on first visit.
+ * Storing in localStorage (vs sessionStorage) lets guests see their order
+ * history even after closing the tab and prevents data loss during the
+ * OAuth redirect.
  */
 export default function GuestTokenInit() {
   useEffect(() => {
-    if (!sessionStorage.getItem("guest_token")) {
-      sessionStorage.setItem("guest_token", crypto.randomUUID());
-    }
+    ensureGuestToken();
   }, []);
 
   return null;

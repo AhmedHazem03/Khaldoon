@@ -51,6 +51,29 @@ function validateImageFile(
   return null;
 }
 
+async function destroyCloudinaryAsset(publicId: string): Promise<void> {
+  if (
+    !process.env.CLOUDINARY_CLOUD_NAME ||
+    !process.env.CLOUDINARY_API_KEY ||
+    !process.env.CLOUDINARY_API_SECRET
+  ) {
+    return;
+  }
+  try {
+    const { v2: cloudinary } = await import("cloudinary");
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+    await cloudinary.uploader.destroy(publicId, { invalidate: true });
+  } catch (err) {
+    // Best-effort: if Cloudinary destroy fails we still want the DB delete to succeed.
+    console.error("[cloudinary] destroy failed for", publicId, err);
+  }
+}
+
 export async function upsertCategory(formData: FormData) {
   await requireAdmin();
   const supabase = await createServerClient();
@@ -70,14 +93,20 @@ export async function upsertCategory(formData: FormData) {
       .from("categories")
       .update({ name, icon, order_index, is_visible })
       .eq("id", id);
-    if (error) throw new Error(`فشل تحديث القسم: ${error.message}`);
+    if (error) {
+      console.error("[upsertCategory] update failed", error);
+      throw new Error(`فشل تحديث القسم: ${error.message}`);
+    }
   } else {
     const { data, error } = await supabase
       .from("categories")
       .insert({ name, icon, order_index, is_visible })
       .select("id")
       .single();
-    if (error || !data) throw new Error(`فشل إضافة القسم: ${error?.message ?? "فشل الحفظ"}`);
+    if (error || !data) {
+      console.error("[upsertCategory] insert failed", error);
+      throw new Error(`فشل إضافة القسم: ${error?.message ?? "فشل الحفظ"}`);
+    }
     categoryId = data.id;
   }
 
@@ -103,7 +132,15 @@ export async function deleteCategory(categoryId: string) {
   await requireAdmin();
   const supabase = await createServerClient();
   const { error } = await supabase.from("categories").delete().eq("id", categoryId);
-  if (error) throw new Error(`فشل حذف القسم: ${error.message}`);
+  if (error) {
+    console.error("[deleteCategory] delete failed", error);
+    throw new Error(`فشل حذف القسم: ${error.message}`);
+  }
+
+  // Both the legacy and current category image asset ids are removed.
+  await destroyCloudinaryAsset(`khaldoun/categories/category-${categoryId}`);
+  await destroyCloudinaryAsset(`khaldoun/categories/category-icon-${categoryId}`);
+
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
   revalidatePath("/");
@@ -136,10 +173,16 @@ export async function upsertProduct(formData: FormData) {
 
   if (id) {
     const { error } = await supabase.from("products").update(payload).eq("id", id);
-    if (error) throw new Error(`فشل تحديث المنتج: ${error.message}`);
+    if (error) {
+      console.error("[upsertProduct] update failed", error);
+      throw new Error(`فشل تحديث المنتج: ${error.message}`);
+    }
   } else {
     const { error } = await supabase.from("products").insert(payload);
-    if (error) throw new Error(`فشل إضافة المنتج: ${error.message}`);
+    if (error) {
+      console.error("[upsertProduct] insert failed", error);
+      throw new Error(`فشل إضافة المنتج: ${error.message}`);
+    }
   }
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
@@ -149,7 +192,13 @@ export async function deleteProduct(productId: string) {
   await requireAdmin();
   const supabase = await createServerClient();
   const { error } = await supabase.from("products").delete().eq("id", productId);
-  if (error) throw new Error(`فشل حذف المنتج: ${error.message}`);
+  if (error) {
+    console.error("[deleteProduct] delete failed", error);
+    throw new Error(`فشل حذف المنتج: ${error.message}`);
+  }
+
+  await destroyCloudinaryAsset(`khaldoun/menu/product-${productId}`);
+
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
 }
@@ -171,12 +220,18 @@ export async function upsertVariant(formData: FormData) {
       .from("product_variants")
       .update({ variant_name, price, is_available, order_index })
       .eq("id", id);
-    if (error) throw new Error(`فشل تحديث المتغير: ${error.message}`);
+    if (error) {
+      console.error("[upsertVariant] update failed", error);
+      throw new Error(`فشل تحديث المتغير: ${error.message}`);
+    }
   } else {
     const { error } = await supabase
       .from("product_variants")
       .insert({ product_id, variant_name, price, is_available, order_index });
-    if (error) throw new Error(`فشل إضافة المتغير: ${error.message}`);
+    if (error) {
+      console.error("[upsertVariant] insert failed", error);
+      throw new Error(`فشل إضافة المتغير: ${error.message}`);
+    }
   }
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
@@ -186,7 +241,10 @@ export async function deleteVariant(variantId: string) {
   await requireAdmin();
   const supabase = await createServerClient();
   const { error } = await supabase.from("product_variants").delete().eq("id", variantId);
-  if (error) throw new Error(`فشل حذف المتغير: ${error.message}`);
+  if (error) {
+    console.error("[deleteVariant] delete failed", error);
+    throw new Error(`فشل حذف المتغير: ${error.message}`);
+  }
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
 }

@@ -1,4 +1,5 @@
 import type { Order, OrderItem, Settings } from "@/types/app";
+import { stripUnsafeChars } from "@/lib/sanitize";
 
 const MAX_URL_LENGTH = 2048;
 
@@ -31,11 +32,11 @@ export function generateWhatsAppMessage(
   const lines: string[] = [];
 
   lines.push(`🧾 طلب جديد — ${order.order_code}`);
-  lines.push(`👤 الاسم: ${order.customer_name}`);
+  lines.push(`👤 الاسم: ${stripUnsafeChars(order.customer_name)}`);
   lines.push(`📞 الهاتف: ${order.customer_phone}`);
 
   if (order.order_type === "delivery") {
-    lines.push(`🚚 توصيل إلى: ${order.delivery_address ?? ""}`);
+    lines.push(`🚚 توصيل إلى: ${stripUnsafeChars(order.delivery_address ?? "")}`);
   } else {
     lines.push(`🏪 استلام من المطعم`);
   }
@@ -43,9 +44,9 @@ export function generateWhatsAppMessage(
   lines.push(`\n📋 الطلب:`);
 
   for (const item of items) {
-    const variantPart = item.variant_name ? ` (${item.variant_name})` : "";
+    const variantPart = item.variant_name ? ` (${stripUnsafeChars(item.variant_name)})` : "";
     lines.push(
-      `• ${item.product_name}${variantPart} × ${item.quantity} = ${item.unit_price * item.quantity} ج`
+      `• ${stripUnsafeChars(item.product_name)}${variantPart} × ${item.quantity} = ${item.unit_price * item.quantity} ج`
     );
   }
 
@@ -70,7 +71,7 @@ export function generateWhatsAppMessage(
   }
 
   if (order.notes) {
-    lines.push(`📝 ملاحظات: ${order.notes}`);
+    lines.push(`📝 ملاحظات: ${stripUnsafeChars(order.notes)}`);
   }
 
   return lines.join("\n");

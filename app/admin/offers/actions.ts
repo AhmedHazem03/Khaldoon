@@ -54,6 +54,28 @@ function validateImageFile(file: File | null): { error: string } | null {
   return null;
 }
 
+async function destroyCloudinaryAsset(publicId: string): Promise<void> {
+  if (
+    !process.env.CLOUDINARY_CLOUD_NAME ||
+    !process.env.CLOUDINARY_API_KEY ||
+    !process.env.CLOUDINARY_API_SECRET
+  ) {
+    return;
+  }
+  try {
+    const { v2: cloudinary } = await import("cloudinary");
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+    await cloudinary.uploader.destroy(publicId, { invalidate: true });
+  } catch (err) {
+    console.error("[cloudinary] destroy failed for", publicId, err);
+  }
+}
+
 // ── CRUD ──────────────────────────────────────────────────────────────────────
 
 export async function addOffer(formData: FormData) {
@@ -132,6 +154,9 @@ export async function deleteOffer(offerId: string) {
   await requireAdmin();
   const supabase = await createServerClient();
   await supabase.from("offers").delete().eq("id", offerId);
+
+  await destroyCloudinaryAsset(`khaldoun/offers/offer-${offerId}`);
+
   revalidatePath("/admin/offers");
   revalidatePath("/");
 }

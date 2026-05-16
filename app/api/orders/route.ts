@@ -1,38 +1,37 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, createSessionClient } from "@/lib/supabase-server";
 import { getSettings } from "@/lib/settings";
+import { rateLimit } from "@/lib/rate-limit";
+import { stripUnsafeChars } from "@/lib/sanitize";
+
+const PHONE_RE = /^01[0125][0-9]{8}$/;
+
+async function rollbackCoupon(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  couponId: string | null
+) {
+  if (!couponId) return;
+  // RPC added in migration_security_fixes.sql; cast until DB types are regenerated.
+  await (supabase.rpc as unknown as (name: string, args: object) => Promise<unknown>)(
+    "decrement_coupon_uses",
+    { p_coupon_id: couponId }
+  );
+}
 
 export async function POST(request: NextRequest) {
-  // ── Rate limiting via Vercel KV (T064) ──────────────────────────────────
-  // Skipped gracefully if KV not configured (local dev without KV env vars).
-  if (process.env.KV_REST_API_URL) {
-    try {
-      const { kv } = await import("@vercel/kv");
-      const ip =
-        request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-        request.headers.get("x-real-ip") ??
-        "unknown";
-      const key = `rate:orders:${ip}`;
-      const count = await kv.incr(key);
-      if (count === 1) await kv.expire(key, 60);
-      if (count > 10) {
-        return NextResponse.json(
-          { error: "طلبات كثيرة جداً، حاول مرة أخرى بعد دقيقة" },
-          { status: 429 }
-        );
-      }
-    } catch {
-      // KV failure MUST NOT block order creation — fail open and log nothing
-    }
-  }
+  // T064 — IP rate limit: 10 orders / minute
+  const limited = await rateLimit({
+    request,
+    key: "orders",
+    limit: 10,
+    errorMessage: "طلبات كثيرة جداً، حاول مرة أخرى بعد دقيقة",
+  });
+  if (limited) return limited;
 
   try {
     const body = await request.json();
-
-    // Fetch settings once — reused throughout this request
     const settings = await getSettings();
 
-    // Reject orders when restaurant has closed ordering
     if (settings.is_ordering_open === "false") {
       return NextResponse.json(
         { error: "الطلبات مغلقة حالياً، شكراً لتفهمك" },
@@ -54,7 +53,6 @@ export async function POST(request: NextRequest) {
       items,
     } = body;
 
-    // Basic structural validation
     if (!customer_name || !customer_phone || !order_type || !items?.length) {
       return NextResponse.json(
         { error: "بيانات الطلب غير مكتملة" },
@@ -62,7 +60,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Input length limits
     if (
       typeof customer_name !== "string" || customer_name.length > 100 ||
       typeof customer_phone !== "string" ||
@@ -74,13 +71,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "بيانات الطلب غير صحيحة" }, { status: 400 });
     }
 
-    // Max 50 items per order
     if (Array.isArray(items) && items.length > 50) {
       return NextResponse.json({ error: "تجاوزت الحد الأقصى لعدد الأصناف" }, { status: 400 });
     }
 
-    const phoneRegex = /^01[0125][0-9]{8}$/;
-    if (!phoneRegex.test(customer_phone)) {
+    if (!PHONE_RE.test(customer_phone)) {
       return NextResponse.json(
         { error: "رقم الهاتف غير صحيح" },
         { status: 400 }
@@ -94,7 +89,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate items structure
     if (
       !Array.isArray(items) ||
       items.some(
@@ -104,11 +98,19 @@ export async function POST(request: NextRequest) {
           !("product_id" in i) ||
           !("quantity" in i) ||
           typeof (i as { quantity: unknown }).quantity !== "number" ||
-          (i as { quantity: number }).quantity < 1
+          (i as { quantity: number }).quantity < 1 ||
+          (i as { quantity: number }).quantity > 99
       )
     ) {
       return NextResponse.json({ error: "بيانات الأصناف غير صحيحة" }, { status: 400 });
     }
+
+    // L5 — strip control / bidi-override chars before persisting or sending to WhatsApp
+    const cleanName = stripUnsafeChars(customer_name).slice(0, 100);
+    const cleanAddress = delivery_address
+      ? stripUnsafeChars(delivery_address).slice(0, 500)
+      : null;
+    const cleanNotes = notes ? stripUnsafeChars(notes).slice(0, 1000) : null;
 
     const supabase = await createServerClient();
 
@@ -124,7 +126,6 @@ export async function POST(request: NextRequest) {
       ),
     ];
 
-    // Fetch prices + active product offers in parallel
     const [{ data: products }, { data: variants }, { data: activeOfferRows }] = await Promise.all([
       supabase
         .from("products")
@@ -143,7 +144,6 @@ export async function POST(request: NextRequest) {
         .eq("offers.is_active", true),
     ]);
 
-    // Verify all products exist and are available
     for (const item of items as Array<{
       product_id: string;
       variant_id?: string | null;
@@ -181,7 +181,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build active product offer map (product_id → offer)
     const now = new Date().toISOString();
     type OfferRow = { id: string; benefit_type: string; benefit_value: number; expires_at: string | null; is_active: boolean };
     const productOfferMap = new Map<string, OfferRow>();
@@ -194,7 +193,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build order items with server-authoritative prices + applied product discounts
     const orderItems = (
       items as Array<{
         product_id: string;
@@ -210,7 +208,6 @@ export async function POST(request: NextRequest) {
         : null;
       let unitPrice = variant ? variant.price : (product.base_price ?? 0);
 
-      // Apply product-level offer discount (server-side)
       const offer = productOfferMap.get(item.product_id);
       if (offer) {
         if (offer.benefit_type === "discount_pct") {
@@ -231,7 +228,6 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    // Recalculate totals server-side
     const subtotal = orderItems.reduce((sum, i) => sum + i.subtotal, 0);
 
     // ── Coupon validation ──────────────────────────────────────────────────
@@ -269,7 +265,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Bonus points from multiplier offers ───────────────────────────────
     const pointsPerHundred = Number(settings.points_per_100_egp ?? "1");
     let bonusPoints = 0;
     for (const item of orderItems) {
@@ -280,7 +275,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fetch delivery fee from DB if delivery order
     let deliveryFee = 0;
     if (order_type === "delivery" && zone_id) {
       const { data: zone } = await supabase
@@ -297,10 +291,7 @@ export async function POST(request: NextRequest) {
       deliveryFee = zone.fee;
     }
 
-    // ── Reserve coupon slot atomically BEFORE creating the order ──────────
-    // The updated increment_coupon_uses RPC does a check-and-increment in one
-    // statement, eliminating the TOCTOU window between validation and commit.
-    // If order creation later fails we lose one slot — acceptable vs over-use.
+    // Reserve coupon slot atomically — increment_coupon_uses is check-and-increment
     if (couponId) {
       const { data: slotReserved } = await supabase.rpc("increment_coupon_uses", {
         p_coupon_id: couponId,
@@ -313,11 +304,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Registered user path — use create_order_with_points RPC ──────────
+    // ── Registered user path ──────────────────────────────────────────────
     if (is_registered) {
       const sessionClient = await createSessionClient();
       const { data: { user: authUser } } = await sessionClient.auth.getUser();
       if (!authUser) {
+        await rollbackCoupon(supabase, couponId);
         return NextResponse.json({ error: "يجب تسجيل الدخول أولاً" }, { status: 401 });
       }
 
@@ -327,11 +319,21 @@ export async function POST(request: NextRequest) {
         .eq("auth_id", authUser.id)
         .single();
       if (!publicUser) {
+        await rollbackCoupon(supabase, couponId);
         return NextResponse.json({ error: "لم يتم العثور على حساب المستخدم" }, { status: 400 });
       }
 
-      const pointsToUse = Math.max(0, Number(points_to_use) || 0);
+      // H2 — cap points discount by max_points_discount_pct (server-authoritative).
+      // The client slider already clamps, but a hand-crafted request must not bypass it.
+      const requestedPoints = Math.max(0, Math.floor(Number(points_to_use) || 0));
       const pointValueEgp = Number(settings.point_value_egp ?? "0.5");
+      const maxPct = Number(settings.max_points_discount_pct ?? "20");
+      const subtotalAfterCoupon = Math.max(0, subtotal - offerDiscount);
+      const maxDiscountEgp = Math.floor((subtotalAfterCoupon * maxPct) / 100);
+      const maxPointsAllowed = pointValueEgp > 0
+        ? Math.floor(maxDiscountEgp / pointValueEgp)
+        : 0;
+      const pointsToUse = Math.min(requestedPoints, maxPointsAllowed);
       const discount = Math.floor(pointsToUse * pointValueEgp);
       const totalPrice = Math.max(0, subtotal + deliveryFee - discount - offerDiscount);
 
@@ -343,12 +345,12 @@ export async function POST(request: NextRequest) {
         p_discount: discount,
         p_total: totalPrice,
         p_order_data: {
-          customer_name,
+          customer_name: cleanName,
           customer_phone,
-          delivery_address: delivery_address ?? "",
+          delivery_address: cleanAddress ?? "",
           order_type,
           zone_id: zone_id ?? "",
-          notes: notes ?? "",
+          notes: cleanNotes ?? "",
         },
         p_items: orderItems.map((i) => ({
           product_id: i.product_id,
@@ -364,10 +366,11 @@ export async function POST(request: NextRequest) {
       });
 
       if (rpcError) {
+        await rollbackCoupon(supabase, couponId);
         if (rpcError.message?.includes("insufficient_points")) {
           return NextResponse.json({ error: "رصيد النقاط غير كافٍ" }, { status: 400 });
         }
-        console.error("RPC error:", rpcError);
+        console.error("[orders] RPC error:", rpcError);
         return NextResponse.json({ error: "فشل في حفظ الطلب، حاول مرة أخرى" }, { status: 500 });
       }
 
@@ -391,18 +394,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Guest path ──
+    // ── Guest path ────────────────────────────────────────────────────────
     const totalPrice = Math.max(0, subtotal + deliveryFee - offerDiscount);
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
-        customer_name,
+        customer_name: cleanName,
         customer_phone,
-        delivery_address: delivery_address ?? null,
+        delivery_address: cleanAddress,
         order_type,
         zone_id: zone_id || null,
-        notes: notes ?? null,
+        notes: cleanNotes,
         subtotal,
         delivery_fee: deliveryFee,
         discount_amount: 0,
@@ -418,7 +421,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (orderError || !order) {
-      console.error("Order insert error:", orderError);
+      await rollbackCoupon(supabase, couponId);
+      console.error("[orders] Insert error:", orderError);
       return NextResponse.json(
         { error: "فشل في حفظ الطلب، حاول مرة أخرى" },
         { status: 500 }
@@ -430,7 +434,10 @@ export async function POST(request: NextRequest) {
       .insert(orderItems.map((i) => ({ ...i, order_id: order.id })));
 
     if (itemsError) {
-      console.error("Order items insert error:", itemsError);
+      // Items failed — best-effort cleanup so we don't leave a phantom order.
+      await supabase.from("orders").delete().eq("id", order.id);
+      await rollbackCoupon(supabase, couponId);
+      console.error("[orders] Items insert error:", itemsError);
       return NextResponse.json(
         { error: "فشل في حفظ عناصر الطلب" },
         { status: 500 }
@@ -450,7 +457,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (err) {
-    console.error("Unexpected error in POST /api/orders:", err);
+    console.error("[orders] Unexpected error:", err);
     return NextResponse.json(
       { error: "خطأ غير متوقع" },
       { status: 500 }

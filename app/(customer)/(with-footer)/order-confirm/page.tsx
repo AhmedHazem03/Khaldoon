@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
+import { getGuestToken } from "@/lib/guest-token";
 
 function OrderConfirmContent() {
   const searchParams = useSearchParams();
@@ -11,10 +12,7 @@ function OrderConfirmContent() {
   async function markWhatsappOpened() {
     if (!orderId) return;
 
-    const guestToken =
-      typeof window !== "undefined"
-        ? sessionStorage.getItem("guest_token")
-        : null;
+    const guestToken = getGuestToken();
 
     const headers: Record<string, string> = {};
     if (guestToken) headers["x-guest-token"] = guestToken;

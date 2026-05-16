@@ -103,6 +103,28 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "khaldoun-cart",
+      version: 2,
+      // Drop any persisted state whose shape doesn't match the current
+      // CartState — safer than crashing when CartItem evolves.
+      migrate: (persisted: unknown, _version) => {
+        void _version;
+        const isCartItem = (i: unknown): i is import("@/types/app").CartItem =>
+          typeof i === "object" &&
+          i !== null &&
+          typeof (i as { product_id?: unknown }).product_id === "string" &&
+          typeof (i as { quantity?: unknown }).quantity === "number" &&
+          typeof (i as { unit_price?: unknown }).unit_price === "number";
+
+        const candidate = persisted as { items?: unknown; couponCode?: unknown; couponDiscount?: unknown } | null;
+        const items = Array.isArray(candidate?.items)
+          ? candidate.items.filter(isCartItem)
+          : [];
+        return {
+          items,
+          couponCode: typeof candidate?.couponCode === "string" ? candidate.couponCode : null,
+          couponDiscount: typeof candidate?.couponDiscount === "number" ? candidate.couponDiscount : 0,
+        } as Partial<CartState>;
+      },
     }
   )
 );

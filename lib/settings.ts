@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
+import { createPublicClient } from "@/lib/supabase-server";
 import type { Settings } from "@/types/app";
 
 // Structural defaults — empty strings signal "not configured yet".
@@ -35,12 +35,7 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 async function fetchSettings(): Promise<Settings> {
-  // Use a plain anon client — no cookie handling needed for public settings table.
-  // M1: avoids using createBrowserClient() in a server-side unstable_cache context.
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("settings").select("key, value");
 
   if (error || !data) {

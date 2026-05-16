@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase-server";
+import { createPublicClient } from "@/lib/supabase-server";
 import { getSettings } from "@/lib/settings";
 import OffersCarousel from "@/components/ui/OffersCarousel";
 import HeroSection from "@/components/home/HeroSection";
@@ -24,10 +24,8 @@ export const metadata = {
 };
 
 export default async function HomePage() {
-  const [settings, supabase] = await Promise.all([
-    getSettings(),
-    createServerClient(),
-  ]);
+  const settings = await getSettings();
+  const supabase = createPublicClient();
 
   const [{ data: offersData }, { data: categoriesData }, { data: productsData }] = await Promise.all([
     supabase

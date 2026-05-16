@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
+import { rateLimit } from "@/lib/rate-limit";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * GET /api/products/prices?ids=uuid1,uuid2,...
  *
- * Returns the current authoritative prices for the requested product/variant combos.
- * Used by the checkout page to detect stale cart prices before order submission.
- *
- * Response: Array<{ id: string; variant_id: string | null; price: number }>
+ * Returns the current authoritative prices for the requested products
+ * and their active variants. Used by checkout to detect stale cart prices.
  */
 export async function GET(request: NextRequest) {
+  const limited = await rateLimit({
+    request,
+    key: "prices",
+    limit: 60,
+  });
+  if (limited) return limited;
+
   const { searchParams } = new URL(request.url);
   const idsParam = searchParams.get("ids");
 
@@ -17,14 +25,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json([], { status: 200 });
   }
 
-  // Sanitize: accept only UUID-shaped segments to prevent injection
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const ids = idsParam
     .split(",")
     .map((s) => s.trim())
-    .filter((s) => uuidPattern.test(s))
-    .slice(0, 100); // hard cap
+    .filter((s) => UUID_RE.test(s))
+    .slice(0, 100);
 
   if (ids.length === 0) {
     return NextResponse.json([], { status: 200 });
@@ -32,40 +37,26 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createServerClient();
 
-  // Fetch products (for items without variants)
-  const { data: products, error: pErr } = await supabase
-    .from("products")
-    .select("id, base_price")
-    .in("id", ids);
+  const [{ data: products, error: pErr }, { data: variants, error: vErr }] = await Promise.all([
+    supabase.from("products").select("id, base_price").in("id", ids),
+    supabase
+      .from("product_variants")
+      .select("id, product_id, price")
+      .in("product_id", ids)
+      .eq("is_available", true),
+  ]);
 
-  if (pErr) {
-    console.error("prices: products query error", pErr);
+  if (pErr || vErr) {
+    console.error("[prices] query error:", pErr ?? vErr);
     return NextResponse.json(
       { error: "فشل في جلب الأسعار" },
       { status: 500 }
     );
   }
 
-  // Fetch all active variants for those products
-  const { data: variants, error: vErr } = await supabase
-    .from("product_variants")
-    .select("id, product_id, price")
-    .in("product_id", ids)
-    .eq("is_available", true);
-
-  if (vErr) {
-    console.error("prices: variants query error", vErr);
-    return NextResponse.json(
-      { error: "فشل في جلب الأسعار" },
-      { status: 500 }
-    );
-  }
-
-  // Build response: one entry per product (null variant) + one per variant
   const result: Array<{ id: string; variant_id: string | null; price: number }> = [];
 
   for (const product of products ?? []) {
-    // Base price entry (for products without variants)
     result.push({ id: product.id, variant_id: null, price: product.base_price ?? 0 });
   }
 

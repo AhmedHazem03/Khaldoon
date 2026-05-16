@@ -1,29 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
-import type { Database } from "@/types/database";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
-  // Rate limiting — 20 attempts / minute / IP (stricter than orders: pure lookup, no order required)
-  if (process.env.KV_REST_API_URL) {
-    try {
-      const { kv } = await import("@vercel/kv");
-      const ip =
-        req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-        req.headers.get("x-real-ip") ??
-        "unknown";
-      const key = `rate:coupon:${ip}`;
-      const count = await kv.incr(key);
-      if (count === 1) await kv.expire(key, 60);
-      if (count > 20) {
-        return NextResponse.json(
-          { error: "محاولات كثيرة جداً، انتظر دقيقة وحاول مجدداً" },
-          { status: 429 }
-        );
-      }
-    } catch {
-      // KV failure must not block coupon validation — fail open
-    }
-  }
+  const limited = await rateLimit({
+    request: req,
+    key: "coupon",
+    limit: 20,
+    errorMessage: "محاولات كثيرة جداً، انتظر دقيقة وحاول مجدداً",
+  });
+  if (limited) return limited;
 
   let body: { coupon_code?: string; subtotal?: number };
   try {
@@ -34,7 +20,6 @@ export async function POST(req: NextRequest) {
 
   const { coupon_code, subtotal = 0 } = body;
 
-  // Validate subtotal is a safe non-negative integer
   const safeSubtotal = typeof subtotal === "number" && Number.isFinite(subtotal) && subtotal >= 0
     ? Math.floor(subtotal)
     : 0;

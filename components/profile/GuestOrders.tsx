@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import OrderCard, { type OrderCardData } from "./OrderCard";
+import { getGuestToken } from "@/lib/guest-token";
 
 type RawOrder = Omit<OrderCardData, "canCancel" | "order_items"> & {
   order_items: OrderCardData["order_items"] | null;
@@ -11,7 +12,7 @@ export default function GuestOrders() {
   const [orders, setOrders] = useState<OrderCardData[] | null>(null);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("guest_token");
+    const token = getGuestToken();
     if (!token) {
       setOrders([]);
       return;
